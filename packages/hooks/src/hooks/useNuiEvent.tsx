@@ -7,7 +7,9 @@ import type { NuiEvent } from '../providers/NuiProvider';
 export interface UseNuiEventOptions<T> {
     defaultValue?: T;
     context?: React.Context<NuiContextValue>;
+    /** @deprecated Use `handler` instead. This property will be removed in a future version. */
     callback?: (data: T) => void;
+    handler?: (payload: T) => void;
 }
 
 type UseNuiEventReturn<T, HasDefault extends boolean> = {
@@ -28,15 +30,16 @@ export function useNuiEvent<T>(
     event: string,
     options: UseNuiEventOptions<T>
 ): UseNuiEventReturn<T, boolean> {
-    const { defaultValue, context = NuiContext, callback } = options;
+    const { defaultValue, context = NuiContext, callback, handler: callbackHandler } = options;
+    const func = callbackHandler ?? callback;
 
     const ctx = useContext(context);
     const [data, setData] = useState<T | undefined>(defaultValue);
-    const callbackRef = useRef(callback);
+    const callbackRef = useRef(func);
 
     useEffect(() => {
-        callbackRef.current = callback;
-    }, [callback]);
+        callbackRef.current = func;
+    }, [func]);
 
     useEffect(() => {
         if (!ctx) {
