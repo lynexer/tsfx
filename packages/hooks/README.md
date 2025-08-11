@@ -25,7 +25,7 @@ Wrap your app:
 import React from "react";
 import { NuiProvider, NuiVisibilityProvider } from "@tsfx/hooks";
 
-export default function Root() {{
+export default function Root() {
   return (
     <NuiProvider>
       <NuiVisibilityProvider>
@@ -33,7 +33,7 @@ export default function Root() {{
       </NuiVisibilityProvider>
     </NuiProvider>
   );
-}}
+}
 ```
 
 Listen for events coming from the client script (Lua/JS):
@@ -41,15 +41,15 @@ Listen for events coming from the client script (Lua/JS):
 ```tsx
 import { useNuiEvent } from "@tsfx/hooks";
 
-function Example() {{
-  useNuiEvent("setData", {{
-    handler: (payload) => {{
+function Example() {
+  useNuiEvent("setData", {
+    handler: (payload) => {
       console.log("NUI payload:", payload);
-    }},
-  }});
+    },
+  });
 
   return <div>Listening…</div>;
-}}
+}
 ```
 
 Send events to the client script and await a response:
@@ -57,10 +57,10 @@ Send events to the client script and await a response:
 ```ts
 import { fetchNui } from "@tsfx/hooks";
 
-async function ping() {{
+async function ping() {
   const res = await fetchNui("ping", { payload: { now: Date.now() } });
   console.log("pong:", res);
-}}
+}
 ```
 
 Check if you’re running in the dev browser:
@@ -68,9 +68,9 @@ Check if you’re running in the dev browser:
 ```ts
 import { isDevBrowser } from "@tsfx/hooks";
 
-if (isDevBrowser()) {{
+if (isDevBrowser()) {
   console.log("Running in browser dev mode");
-}}
+}
 ```
 
 ---
@@ -100,10 +100,10 @@ A React context that exposes the NUI bridge object your app uses internally.
 import React, { useContext } from "react";
 import { NuiContext } from "@tsfx/hooks";
 
-function Debug() {{
+function Debug() {
   const bridge = useContext(NuiContext);
-  return <pre>{{JSON.stringify(bridge, null, 2)}}</pre>;
-}}
+  return <pre>{JSON.stringify(bridge, null, 2)}</pre>;
+}
 ```
 
 ### `NuiVisibilityContext`
@@ -113,10 +113,10 @@ A `React.Context<boolean>` that tells you if the UI should be visible.
 import React, { useContext } from "react";
 import { NuiVisibilityContext } from "@tsfx/hooks";
 
-function Gate({ children }: React.PropsWithChildren) {{
+function Gate({ children }: React.PropsWithChildren) {
   const visible = useContext(NuiVisibilityContext);
   return visible ? <>{children}</> : null;
-}}
+}
 ```
 
 ---
@@ -137,26 +137,26 @@ Strongly-typed listener for client → UI messages.
 
 **`options` fields (typical):**
 - `defaultValue?: T` — default value if no data is received
-- `handler?: (data: T) => void` — optional side-effect handler when event arrives
+- `handler?: (payload: T) => void` — side-effect handler when event arrives
 
 **Example:**
 ```tsx
 type User = { id: number; name: string };
 
-function UsersPanel() {{
+function UsersPanel() {
   const [users, setUsers] = React.useState<User[]>([]);
 
-  useNuiEvent<User[]>("users:list", {{
+  useNuiEvent<User[]>("users:list", {
     defaultValue: [],
     handler: (list) => setUsers(list),
-  }});
+  });
 
   return (
     <ul>
       {users.map(u => <li key={u.id}>{u.name}</li>)}
     </ul>
   );
-}}
+}
 ```
 
 ### `useNuiVisibility(): boolean`
@@ -166,10 +166,10 @@ Consume visibility state from `NuiVisibilityContext`.
 ```tsx
 import { useNuiVisibility } from "@tsfx/hooks";
 
-export function HUD() {{
+export function HUD() {
   const visible = useNuiVisibility();
   return visible ? <div className="hud">HUD</div> : null;
-}}
+}
 ```
 
 ---
@@ -197,10 +197,10 @@ export async function fetchNui<T = unknown>(
 ```ts
 type Balance = { amount: number; currency: string };
 
-async function loadBalance() {{
+async function loadBalance() {
   const balance = await fetchNui<Balance>("bank:getBalance");
   console.log(balance.amount);
-}}
+}
 ```
 
 ### Dev helpers
@@ -211,9 +211,9 @@ Returns `true` when running in a regular browser (not inside FiveM). Useful for 
 ```ts
 import { isDevBrowser } from "@tsfx/hooks";
 
-if (isDevBrowser()) {{
+if (isDevBrowser()) {
   // Use fake data or open a mocked panel
-}}
+}
 ```
 
 *(If you expose them in the future)* you can add utilities like `sendDevNuiEvent` / `sendDevNuiEvents` to simulate incoming messages during browser development.
