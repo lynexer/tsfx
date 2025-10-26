@@ -1,6 +1,6 @@
 'use client';
 
-import React, { PropsWithChildren, useCallback, useEffect, useState } from 'react';
+import React, { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 import { NuiVisibilityContext, NuiVisibilityContextValue } from '../contexts';
 import { useNuiEvent } from '../hooks';
 import { isDevBrowser, sendDevNuiEvent } from '../services/development';
@@ -10,15 +10,19 @@ export interface NuiVisibilityProviderProps {
     debug?: boolean;
     context?: React.Context<NuiVisibilityContextValue>;
     hideKeys?: string[];
+    animationTimeout?: number;
 }
 
 export const NuiVisibilityProvider: React.FC<PropsWithChildren<NuiVisibilityProviderProps>> = ({
     debug: debugEnabled,
     children,
     context = NuiVisibilityContext,
-    hideKeys = ['Escape']
+    hideKeys = ['Escape'],
+    animationTimeout = 300
 }) => {
+    const [shouldRender, setShouldRender] = useState<boolean>(false);
     const [visible, setVisible] = useState<boolean>(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useNuiEvent<boolean>('show', { callback: setVisible });
     sendDevNuiEvent({ action: 'show', payload: true }, 0);
@@ -31,6 +35,51 @@ export const NuiVisibilityProvider: React.FC<PropsWithChildren<NuiVisibilityProv
         },
         [debugEnabled]
     );
+
+    useEffect(() => {
+        if (visible) {
+            setShouldRender(true);
+        } else {
+            const container = containerRef.current;
+
+            if (!container) {
+                setShouldRender(false);
+                return;
+            }
+
+            const animations = container.getAnimations({ subtree: true });
+
+            if (animations.length === 0) {
+                debug('No animations found, hiding immediately');
+
+                setShouldRender(false);
+            } else {
+                debug(`Waiting for ${animations.length} animations to complete`);
+
+                Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+                    debug('All animations completed');
+
+                    if (container) {
+                        container.style.display = 'none';
+                    }
+
+                    setShouldRender(false);
+                });
+
+                const timeout = setTimeout(() => {
+                    debug('Animation timeout reached, forcing hide');
+
+                    if (container) {
+                        container.style.display = 'none';
+                    }
+
+                    setShouldRender(false);
+                }, animationTimeout);
+
+                return () => clearTimeout(timeout);
+            }
+        }
+    }, [visible, animationTimeout, debug]);
 
     useEffect(() => {
         if (!visible) {
@@ -52,11 +101,14 @@ export const NuiVisibilityProvider: React.FC<PropsWithChildren<NuiVisibilityProv
         window.addEventListener('keydown', keyHandler);
 
         return () => window.removeEventListener('keydown', keyHandler);
-    }, [visible]);
+    }, [visible, hideKeys, debug]);
 
     return (
         <context.Provider value={{ visible, setVisible }}>
-            <div style={{ visibility: visible ? 'visible' : 'hidden', height: '100%' }}>
+            <div
+                ref={containerRef}
+                style={{ display: shouldRender ? 'block' : 'none', height: '100%' }}
+            >
                 {children}
             </div>
         </context.Provider>
