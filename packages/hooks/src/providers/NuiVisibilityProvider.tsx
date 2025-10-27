@@ -1,6 +1,7 @@
 'use client';
 
-import React, { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
+import React, { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isVisibilityExempt } from '../components';
 import { NuiVisibilityContext, NuiVisibilityContextValue } from '../contexts';
 import { useNuiEvent } from '../hooks';
 import { isDevBrowser, sendDevNuiEvent } from '../services/development';
@@ -35,6 +36,21 @@ export const NuiVisibilityProvider: React.FC<PropsWithChildren<NuiVisibilityProv
         },
         [debugEnabled]
     );
+
+    const { exemptChildren, controlledChildren } = useMemo(() => {
+        const exempt: React.ReactNode[] = [];
+        const controlled: React.ReactNode[] = [];
+
+        React.Children.forEach(children, (child) => {
+            if (isVisibilityExempt(child)) {
+                exempt.push(child);
+            } else {
+                controlled.push(child);
+            }
+        });
+
+        return { exemptChildren: exempt, controlledChildren: controlled };
+    }, [children]);
 
     useEffect(() => {
         if (visible) {
@@ -105,11 +121,13 @@ export const NuiVisibilityProvider: React.FC<PropsWithChildren<NuiVisibilityProv
 
     return (
         <context.Provider value={{ visible, setVisible }}>
+            {exemptChildren}
+
             <div
                 ref={containerRef}
                 style={{ display: shouldRender ? 'block' : 'none', height: '100%' }}
             >
-                {children}
+                {controlledChildren}
             </div>
         </context.Provider>
     );
