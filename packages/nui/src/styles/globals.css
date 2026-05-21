@@ -1,0 +1,76 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import "./fonts/index.css";
+
+@custom-variant dark (&:is(.dark *));
+
+[data-sonner-toaster] {
+    position: absolute;
+}
+
+@theme inline {
+    --font-sans: "Rubik", sans-serif;
+    --color-background: rgba(var(--background), var(--tw-opacity-bg, 1));
+    --color-foreground: rgba(var(--foreground), var(--tw-opacity-fg, 1));
+    --color-card: rgba(var(--card), var(--tw-opacity-bg, 1));
+    --color-card-foreground: rgba(var(--card-foreground), var(--tw-opacity-fg, 1));
+    --color-popover: rgba(var(--popover), var(--tw-opacity-bg, 1));
+    --color-popover-foreground: rgba(var(--popover-foreground), var(--tw-opacity-fg, 1));
+    --color-primary: rgba(var(--primary), var(--tw-opacity-bg, 1));
+    --color-primary-foreground: rgba(var(--primary-foreground), var(--tw-opacity-fg, 1));
+    --color-secondary: rgba(var(--secondary), var(--tw-opacity-bg, 1));
+    --color-secondary-foreground: rgba(var(--secondary-foreground), var(--tw-opacity-fg, 1));
+    --color-muted: rgba(var(--muted), var(--tw-opacity-bg, 1));
+    --color-muted-foreground: rgba(var(--muted-foreground), var(--tw-opacity-fg, 1));
+    --color-accent: rgba(var(--accent), var(--tw-opacity-bg, 1));
+    --color-accent-foreground: rgba(var(--accent-foreground), var(--tw-opacity-fg, 1));
+    --color-info: rgba(var(--info), var(--tw-opacity-bg, 1));
+    --color-info-foreground: rgba(var(--info-foreground), var(--tw-opacity-fg, 1));
+    --color-success: rgba(var(--success), var(--tw-opacity-bg, 1));
+    --color-success-foreground: rgba(var(--success-foreground), var(--tw-opacity-fg, 1));
+    --color-warning: rgba(var(--warning), var(--tw-opacity-bg, 1));
+    --color-warning-foreground: rgba(var(--warning-foreground), var(--tw-opacity-fg, 1));
+    --color-destructive: rgba(var(--destructive), var(--tw-opacity-bg, 1));
+    --color-destructive-foreground: rgba(var(--destructive-foreground), var(--tw-opacity-fg, 1));
+    --color-border: rgba(var(--border), var(--tw-opacity-bg, 1));
+    --color-input: rgba(var(--input), var(--tw-opacity-bg, 1));
+    --color-ring: rgba(var(--ring), var(--tw-opacity-bg, 1));
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-sidebar: rgba(var(--sidebar), var(--tw-opacity-bg, 1));
+    --color-sidebar-foreground: rgba(var(--sidebar-foreground), var(--tw-opacity-fg, 1));
+    --color-sidebar-primary: rgba(var(--sidebar-primary), var(--tw-opacity-bg, 1));
+    --color-sidebar-primary-foreground: rgba(
+        var(--sidebar-primary-foreground),
+        var(--tw-opacity-fg, 1)
+    );
+    --color-sidebar-accent: rgba(var(--sidebar-accent), var(--tw-opacity-bg, 1));
+    --color-sidebar-accent-foreground: rgba(
+        var(--sidebar-accent-foreground),
+        var(--tw-opacity-fg, 1)
+    );
+    --color-sidebar-border: rgba(var(--sidebar-border), var(--tw-opacity-bg, 1));
+    --color-sidebar-ring: rgba(var(--sidebar-ring), var(--tw-opacity-bg, 1));
+}
+
+@layer base {
+    * {
+        outline-color: rgba(var(--ring), 0.5);
+        @apply border-border;
+    }
+    body {
+        @apply text-foreground;
+        font-family: var(--font-rubik);
+    }
+}
+
+@utility opacity-bg-* {
+    --tw-opacity-bg: calc(--value(integer) / 100);
+}
+
+@utility opacity-fg-* {
+    --tw-opacity-fg: calc(--value(integer) / 100);
+}
