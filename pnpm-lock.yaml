@@ -252,6 +252,8 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/nui: {}
+
   packages/tailwind-config:
     devDependencies:
       '@biomejs/biome':
