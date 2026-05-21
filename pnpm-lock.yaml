@@ -278,6 +278,8 @@ importers:
         specifier: workspace:*
         version: link:../biome-config
 
+  packages/vscode: {}
+
 packages:
 
   7zip-bin@5.1.1:
