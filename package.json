@@ -8,10 +8,10 @@
         "release": "changeset publish"
     },
     "devDependencies": {
-        "@changesets/cli": "^2.29.4",
-        "@swc/core": "^1.11.24",
-        "@types/node": "^22.15.17",
-        "turbo": "^2.5.4"
+        "@changesets/cli": "^2.31.0",
+        "@swc/core": "^1.15.33",
+        "@types/node": "^22.19.19",
+        "turbo": "^2.9.14"
     },
     "engines": {
         "node": ">=18"
