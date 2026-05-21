@@ -1,10 +1,8 @@
 packages:
   - apps/*
   - packages/*
-onlyBuiltDependencies:
-  - '@swc/core'
-  - '@tailwindcss/oxide'
-  - '@vercel/speed-insights'
-  - esbuild
-  - sharp
-  - unrs-resolver
+
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
+  sharp: true
