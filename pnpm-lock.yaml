@@ -225,39 +225,6 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
 
-  packages/client:
-    devDependencies:
-      '@citizenfx/client':
-        specifier: ^2.0.15015-1
-        version: 2.0.15015-1
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.0(@swc/core@1.11.24)(jiti@2.4.2)(postcss@8.5.3)(typescript@5.8.3)
-      typescript:
-        specifier: ^5.8.2
-        version: 5.8.3
-
-  packages/core:
-    devDependencies:
-      '@citizenfx/client':
-        specifier: ^2.0.15015-1
-        version: 2.0.15015-1
-      '@citizenfx/server':
-        specifier: ^2.0.14862-1
-        version: 2.0.14862-1
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.0(@swc/core@1.11.24)(jiti@2.4.2)(postcss@8.5.3)(typescript@5.8.3)
-      typescript:
-        specifier: ^5.8.2
-        version: 5.8.3
-
   packages/eslint-config:
     devDependencies:
       '@eslint/js':
@@ -320,21 +287,6 @@ importers:
         version: 8.5.0(@swc/core@1.11.24)(jiti@2.4.2)(postcss@8.5.3)(typescript@5.8.3)
       typescript:
         specifier: ^5.8.3
-        version: 5.8.3
-
-  packages/server:
-    devDependencies:
-      '@citizenfx/server':
-        specifier: ^2.0.14862-1
-        version: 2.0.14862-1
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.0(@swc/core@1.11.24)(jiti@2.4.2)(postcss@8.5.3)(typescript@5.8.3)
-      typescript:
-        specifier: ^5.8.2
         version: 5.8.3
 
   packages/tailwind-config:
@@ -422,12 +374,6 @@ packages:
 
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
-
-  '@citizenfx/client@2.0.15015-1':
-    resolution: {integrity: sha512-gm0/fWM0/Wn5Hny+cnSRsBc73Opz1PPKS4LKCraIE477tQ0uGNVACoeTQqxRJz54Lu09KeA4cCfocVmefVAqUA==}
-
-  '@citizenfx/server@2.0.14862-1':
-    resolution: {integrity: sha512-I6XnxIGBhskPe9S+q1OQLDqs6TYw1RhX06K6jUg+n0hGITYools6VBIIhdPe2uUlHA+76qJajQlV9ONeR3mDig==}
 
   '@emnapi/runtime@1.4.3':
     resolution: {integrity: sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ==}
@@ -4394,10 +4340,6 @@ snapshots:
       fs-extra: 7.0.1
       human-id: 4.1.1
       prettier: 2.8.8
-
-  '@citizenfx/client@2.0.15015-1': {}
-
-  '@citizenfx/server@2.0.14862-1': {}
 
   '@emnapi/runtime@1.4.3':
     dependencies:
