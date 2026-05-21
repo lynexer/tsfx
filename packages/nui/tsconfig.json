@@ -3,8 +3,11 @@
     "compilerOptions": {
         "outDir": "dist",
         "rootDir": "src",
-        "types": ["@types/node"],
-        "noEmit": true
+        "types": ["@types/node", "@types/react", "@types/react-dom"],
+        "noEmit": true,
+        "paths": {
+            "@/*": ["./*"]
+        }
     },
     "include": ["src"],
     "exclude": ["node_modules", "dist", ".turbo"]
