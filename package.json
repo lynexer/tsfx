@@ -1,25 +1,20 @@
 {
-  "name": "tsfx",
-  "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "check-types": "turbo run check-types",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "release": "changeset publish"
-  },
-  "devDependencies": {
-    "@changesets/cli": "^2.29.4",
-    "@swc/core": "^1.11.24",
-    "@types/node": "^22.15.17",
-    "prettier": "^3.5.3",
-    "prettier-plugin-organize-imports": "^4.1.0",
-    "prettier-plugin-tailwindcss": "^0.6.11",
-    "turbo": "^2.5.4"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "packageManager": "pnpm@10.11.0"
+    "name": "tsfx",
+    "private": true,
+    "scripts": {
+        "build": "turbo run build",
+        "dev": "turbo run dev",
+        "lint": "turbo run lint",
+        "release": "changeset publish"
+    },
+    "devDependencies": {
+        "@changesets/cli": "^2.29.4",
+        "@swc/core": "^1.11.24",
+        "@types/node": "^22.15.17",
+        "turbo": "^2.5.4"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "packageManager": "pnpm@10.11.0"
 }

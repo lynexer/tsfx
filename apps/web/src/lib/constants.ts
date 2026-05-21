@@ -79,26 +79,22 @@ export const VALUE_PROPS = [
     {
         icon: 'CheckCircle',
         title: 'Instant Download',
-        description:
-            'Your purchases are available instantly in your Cfx.re Portal account.'
+        description: 'Your purchases are available instantly in your Cfx.re Portal account.'
     },
     {
         icon: 'Heart',
         title: 'Beginner Friendly',
-        description:
-            'Setup is a breeze & support is always ready to help you if needed.'
+        description: 'Setup is a breeze & support is always ready to help you if needed.'
     },
     {
         icon: 'Zap',
         title: 'Performance',
-        description:
-            'Have thousands of players? Our scripts are built to handle much more.'
+        description: 'Have thousands of players? Our scripts are built to handle much more.'
     },
     {
         icon: 'Shield',
         title: 'Security',
-        description:
-            "Don't rely on anticheats - our scripts are designed with security in mind."
+        description: "Don't rely on anticheats - our scripts are designed with security in mind."
     }
 ] as const satisfies readonly ValueProp[];
 

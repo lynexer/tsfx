@@ -1,12 +1,12 @@
 'use client';
 
+import { MotionDiv } from '@/components/motion';
 import {
     Accordion,
     AccordionContent,
     AccordionItem,
     AccordionTrigger
 } from '@/components/ui/accordion';
-import { MotionDiv } from '@/components/motion';
 
 const faqs = [
     {
@@ -19,7 +19,7 @@ const faqs = [
     {
         question: 'How do I receive my purchase?',
         answer:
-            'After completing your purchase on our Tebex store, you\'ll receive ' +
+            "After completing your purchase on our Tebex store, you'll receive " +
             'instant access through your Cfx.re Portal account. You can also access ' +
             'downloads directly from your Tebex account dashboard.'
     },
@@ -39,7 +39,7 @@ const faqs = [
     {
         question: 'Can I get a refund?',
         answer:
-            'We offer refunds within 72 hours of purchase if you haven\'t downloaded ' +
+            "We offer refunds within 72 hours of purchase if you haven't downloaded " +
             'the product. Once downloaded, we work with you to resolve any issues ' +
             'instead. Please contact support for refund requests.'
     },
@@ -67,16 +67,11 @@ export function Faq() {
                         <span className='h-1.5 w-1.5 rounded-full bg-accent-500' />
                         FAQ
                     </span>
-                    <h2
-                        className={
-                            'mt-4 text-4xl font-bold text-white'
-                        }
-                    >
+                    <h2 className={'mt-4 text-4xl font-bold text-white'}>
                         Frequently Asked Questions
                     </h2>
                     <p className='mx-auto mt-4 max-w-lg text-neutral-400'>
-                        Everything you need to know about our products and
-                        services.
+                        Everything you need to know about our products and services.
                     </p>
                 </MotionDiv>
 
@@ -85,15 +80,14 @@ export function Faq() {
                     <Accordion type='single' collapsible>
                         {faqs.map((faq, i) => (
                             <AccordionItem
+                                /* biome-ignore lint/suspicious/noArrayIndexKey: static faq list */
                                 key={i}
-                                value={'item-' + i}
+                                value={`item-${i}`}
                             >
                                 <AccordionTrigger className='text-left'>
                                     {faq.question}
                                 </AccordionTrigger>
-                                <AccordionContent>
-                                    {faq.answer}
-                                </AccordionContent>
+                                <AccordionContent>{faq.answer}</AccordionContent>
                             </AccordionItem>
                         ))}
                     </Accordion>

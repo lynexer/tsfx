@@ -1,6 +1,6 @@
+import path from 'node:path';
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
-import path from 'node:path';
 import { red } from 'yoctocolors';
 
 export type BranchOption = 'recommended' | 'stable' | 'latest';

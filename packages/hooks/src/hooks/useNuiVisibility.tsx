@@ -1,7 +1,7 @@
 'use client';
 
-import { Context, useContext } from 'react';
-import { NuiVisibilityContext, NuiVisibilityContextValue } from '../contexts';
+import { type Context, useContext } from 'react';
+import { NuiVisibilityContext, type NuiVisibilityContextValue } from '../contexts';
 
 export const useNuiVisibility = () =>
     useContext<NuiVisibilityContextValue>(

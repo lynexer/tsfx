@@ -1,11 +1,11 @@
-import { source } from '@/lib/source';
-import { getMDXComponents } from '@/mdx-components';
-import { TableOfContents } from 'fumadocs-core/server';
-import type { Page } from 'fumadocs-core/source';
+import type { TableOfContents } from 'fumadocs-core/server';
+import type { Page as DocsPageType } from 'fumadocs-core/source';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page';
-import { MDXContent } from 'mdx/types';
+import type { MDXContent } from 'mdx/types';
 import { notFound } from 'next/navigation';
+import { source } from '@/lib/source';
+import { getMDXComponents } from '@/mdx-components';
 
 interface PageData {
     full: boolean;
@@ -17,17 +17,17 @@ interface PageData {
 
 export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
     const params = await props.params;
-    const page: Page<PageData> | undefined = source.getPage(params.slug);
+    const page: DocsPageType<PageData> | undefined = source.getPage(params.slug);
     if (!page) notFound();
 
-    const MDXContent = page.data.body;
+    const Body = page.data.body;
 
     return (
         <DocsPage toc={page.data.toc} full={page.data.full}>
             <DocsTitle>{page.data.title}</DocsTitle>
             <DocsDescription>{page.data.description}</DocsDescription>
             <DocsBody>
-                <MDXContent
+                <Body
                     components={getMDXComponents({
                         // this allows you to link to other pages with relative file paths
                         a: createRelativeLink(source, page)
@@ -44,11 +44,11 @@ export async function generateStaticParams() {
 
 export async function generateMetadata(props: { params: Promise<{ slug?: string[] }> }) {
     const params = await props.params;
-    const page: Page<PageData> | undefined = source.getPage(params.slug);
-    if (!page) notFound();
+    const metaPage: DocsPageType<PageData> | undefined = source.getPage(params.slug);
+    if (!metaPage) notFound();
 
     return {
-        title: page.data.title,
-        description: page.data.description
+        title: metaPage.data.title,
+        description: metaPage.data.description
     };
 }

@@ -1,4 +1,4 @@
-import { NuiEvent } from '../providers';
+import type { NuiEvent } from '../providers';
 
 export const isDevBrowser = (): boolean => !(window as any).invokeNative;
 

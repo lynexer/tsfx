@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext } from 'react';
-import { NuiEvent } from '../providers';
+import type { NuiEvent } from '../providers';
 
 export interface NuiContextValue {
     addHandler(event: string, handler: (event: MessageEvent<NuiEvent<unknown>>) => void): void;

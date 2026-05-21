@@ -1,4 +1,4 @@
-import React, { PropsWithChildren } from 'react';
+import React, { type PropsWithChildren } from 'react';
 
 export const NuiVisibilityExempt: React.FC<PropsWithChildren> = ({ children }) => {
     return <>{children}</>;

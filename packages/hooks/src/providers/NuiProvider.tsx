@@ -1,6 +1,6 @@
 'use client';
 
-import React, { PropsWithChildren, useCallback, useEffect, useRef } from 'react';
+import React, { type PropsWithChildren, useCallback, useEffect, useRef } from 'react';
 import { NuiContext, type NuiContextValue } from '../contexts/NuiContext';
 
 export interface NuiEvent<T> {
@@ -59,13 +59,15 @@ export const NuiProvider: React.FC<PropsWithChildren<NuiProviderProps>> = ({
 
             if (relevantHandlers.length > 0) {
                 debug(`Invoking ${relevantHandlers.length} handler(s) for event action:`, action);
-                relevantHandlers.forEach((handler) => handler(event));
+                relevantHandlers.forEach((handler) => {
+                    handler(event);
+                });
             }
         };
 
         window.addEventListener('message', eventHandler);
         return () => window.removeEventListener('message', eventHandler);
-    }, []);
+    }, [debug, validateEvent]);
 
     return <context.Provider value={{ addHandler, removeHandler }}>{children}</context.Provider>;
 };

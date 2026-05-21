@@ -3,7 +3,7 @@
     "compilerOptions": {
         "outDir": "dist",
         "rootDir": "src",
-        "types": [ "@types/node", "@types/react", "@types/react-dom" ],
+        "types": ["@types/node", "@types/react", "@types/react-dom"],
         "jsx": "react",
         "lib": ["dom"]
     },

@@ -1,10 +1,10 @@
-import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { Hero } from '@/components/sections/hero';
-import { ValueProps } from '@/components/sections/value-props';
-import { FeaturedProducts } from '@/components/sections/featured-products';
+import { Navbar } from '@/components/layout/navbar';
 import { Community } from '@/components/sections/community';
 import { Faq } from '@/components/sections/faq';
+import { FeaturedProducts } from '@/components/sections/featured-products';
+import { Hero } from '@/components/sections/hero';
+import { ValueProps } from '@/components/sections/value-props';
 
 export default function Home() {
     return (

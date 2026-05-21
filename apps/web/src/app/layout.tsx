@@ -15,9 +15,7 @@ export const metadata: Metadata = {
         ' systems, and more.'
 };
 
-export default function RootLayout({
-    children
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
     return (
         <html lang='en' className={inter.variable}>
             <body className='antialiased'>{children}</body>

@@ -2,7 +2,7 @@ import { createWriteStream } from 'node:fs';
 import stream from 'node:stream';
 import { promisify } from 'node:util';
 import Observable from 'zen-observable';
-import { BranchOption, OsOption } from '../utils/Config';
+import type { BranchOption, OsOption } from '../utils/Config';
 
 interface JGResponse {
     recommendedArtifact: string;

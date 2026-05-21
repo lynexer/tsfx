@@ -66,25 +66,24 @@ export function Footer() {
                             </span>
                         </Link>
                         <p className='mt-4 text-sm leading-relaxed text-neutral-400'>
-                            Premium FiveM scripts and resources to elevate your
-                            server experience.
+                            Premium FiveM scripts and resources to elevate your server experience.
                         </p>
                         <div className='mt-6 flex items-center gap-4'>
                             <a
                                 href='https://discord.gg/tsfx'
                                 target='_blank'
                                 rel='noopener noreferrer'
-                                aria-label='Discord'
                                 className={
-                                    'text-neutral-400 transition-colors' +
-                                    ' hover:text-accent-500'
+                                    'text-neutral-400 transition-colors' + ' hover:text-accent-500'
                                 }
                             >
+                                <span className='sr-only'>Discord</span>
                                 <svg
                                     xmlns='http://www.w3.org/2000/svg'
                                     viewBox='0 0 24 24'
                                     fill='currentColor'
                                     className='size-5'
+                                    aria-hidden='true'
                                 >
                                     <path
                                         d={
@@ -127,17 +126,17 @@ export function Footer() {
                                 href='https://github.com/tsfx'
                                 target='_blank'
                                 rel='noopener noreferrer'
-                                aria-label='GitHub'
                                 className={
-                                    'text-neutral-400 transition-colors' +
-                                    ' hover:text-accent-500'
+                                    'text-neutral-400 transition-colors' + ' hover:text-accent-500'
                                 }
                             >
+                                <span className='sr-only'>GitHub</span>
                                 <svg
                                     xmlns='http://www.w3.org/2000/svg'
                                     viewBox='0 0 24 24'
                                     fill='currentColor'
                                     className='size-5'
+                                    aria-hidden='true'
                                 >
                                     <path
                                         d={

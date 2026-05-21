@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import Listr, { ListrTaskObject } from 'listr';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import Listr, { type ListrTaskObject } from 'listr';
 import { gray, green, yellow } from 'yoctocolors';
-import Observable from 'zen-observable';
+import type Observable from 'zen-observable';
 import { Downloader } from './services/Downloader';
 import { Extractor } from './services/Extractor';
 import { Config } from './utils/Config';

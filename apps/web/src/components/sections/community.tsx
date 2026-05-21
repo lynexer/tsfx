@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { MotionDiv } from '@/components/motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,8 +28,7 @@ export function Community() {
                     </span>
                     <h2
                         className={
-                            'mt-4 text-4xl font-bold leading-tight ' +
-                            'md:text-5xl lg:text-6xl'
+                            'mt-4 text-4xl font-bold leading-tight ' + 'md:text-5xl lg:text-6xl'
                         }
                     >
                         <span className='text-white'>Built for those who</span>
@@ -51,8 +50,7 @@ export function Community() {
                     >
                         <div
                             className={
-                                'grid grid-cols-1 gap-12 md:grid-cols-2 ' +
-                                'md:items-center'
+                                'grid grid-cols-1 gap-12 md:grid-cols-2 ' + 'md:items-center'
                             }
                         >
                             {/* Left side — Stats */}
@@ -64,11 +62,7 @@ export function Community() {
                                         'text-accent-500'
                                     }
                                 >
-                                    <span
-                                        className={
-                                            'h-1.5 w-1.5 rounded-full bg-accent-500'
-                                        }
-                                    />
+                                    <span className={'h-1.5 w-1.5 rounded-full bg-accent-500'} />
                                     Live Stats
                                 </span>
 
@@ -107,8 +101,7 @@ export function Community() {
                                     Premium Support
                                 </h3>
                                 <p className='mt-2 text-neutral-400'>
-                                    Expert guidance, fast responses. We handle
-                                    everything.
+                                    Expert guidance, fast responses. We handle everything.
                                 </p>
 
                                 <div className='mt-6'>

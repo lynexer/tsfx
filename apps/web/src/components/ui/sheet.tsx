@@ -1,9 +1,9 @@
 'use client';
 
-import * as React from 'react';
 import * as SheetPrimitive from '@radix-ui/react-dialog';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { X } from 'lucide-react';
+import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -22,7 +22,7 @@ const SheetOverlay = React.forwardRef<
     <SheetPrimitive.Overlay
         className={cn(
             'fixed inset-0 z-50 bg-black/80 transition-opacity duration-300 ' +
-            'data-[state=open]:opacity-100 data-[state=closed]:opacity-0',
+                'data-[state=open]:opacity-100 data-[state=closed]:opacity-0',
             className
         )}
         {...props}
@@ -33,7 +33,7 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
     'fixed z-50 gap-4 border-neutral-800 bg-neutral-950 p-6 shadow-lg ' +
-    'transition-transform duration-300 ease-in-out',
+        'transition-transform duration-300 ease-in-out',
     {
         variants: {
             side: {
@@ -90,19 +90,13 @@ const SheetContent = React.forwardRef<
 SheetContent.displayName = 'SheetContent';
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div
-        className={cn('flex flex-col space-y-2 text-center sm:text-left', className)}
-        {...props}
-    />
+    <div className={cn('flex flex-col space-y-2 text-center sm:text-left', className)} {...props} />
 );
 SheetHeader.displayName = 'SheetHeader';
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
     <div
-        className={cn(
-            'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
-            className
-        )}
+        className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)}
         {...props}
     />
 );
@@ -134,13 +128,13 @@ SheetDescription.displayName = SheetPrimitive.Description.displayName;
 
 export {
     Sheet,
-    SheetPortal,
-    SheetOverlay,
-    SheetTrigger,
     SheetClose,
     SheetContent,
-    SheetHeader,
+    SheetDescription,
     SheetFooter,
+    SheetHeader,
+    SheetOverlay,
+    SheetPortal,
     SheetTitle,
-    SheetDescription
+    SheetTrigger
 };

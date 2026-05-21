@@ -1,14 +1,19 @@
 {
-  "name": "@repo/tailwind-config",
-  "version": "0.0.0",
-  "type": "module",
-  "private": true,
-  "exports": {
-    ".": "./shared-styles.css",
-    "./postcss": "./postcss.config.js"
-  },
-  "devDependencies": {
-    "postcss": "^8.5.3",
-    "tailwindcss": "^4.1.5"
-  }
+    "name": "@repo/tailwind-config",
+    "version": "0.0.0",
+    "type": "module",
+    "private": true,
+    "exports": {
+        ".": "./shared-styles.css",
+        "./postcss": "./postcss.config.js"
+    },
+    "scripts": {
+        "lint": "biome check --write ."
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.4.15",
+        "@repo/biome-config": "workspace:*",
+        "postcss": "^8.5.3",
+        "tailwindcss": "^4.1.5"
+    }
 }

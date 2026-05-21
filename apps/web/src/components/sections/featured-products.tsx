@@ -1,16 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { MotionDiv, StaggerContainer, staggerChildVariants } from '@/components/motion';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-    MotionDiv,
-    StaggerContainer,
-    staggerChildVariants
-} from '@/components/motion';
 
 const products = [
     {
@@ -60,11 +56,7 @@ export function FeaturedProducts() {
                         <span className='h-1.5 w-1.5 rounded-full bg-accent-500' />
                         Featured
                     </span>
-                    <h2
-                        className={
-                            'mt-4 text-4xl font-bold text-white md:text-5xl'
-                        }
-                    >
+                    <h2 className={'mt-4 text-4xl font-bold text-white md:text-5xl'}>
                         Featured Scripts
                     </h2>
                     <p className='mx-auto mt-4 max-w-lg text-neutral-400'>
@@ -74,16 +66,11 @@ export function FeaturedProducts() {
 
                 {/* Product grid */}
                 <StaggerContainer
-                    className={
-                        'mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'
-                    }
+                    className={'mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'}
                     staggerDelay={0.15}
                 >
                     {products.map((product) => (
-                        <motion.div
-                            key={product.title}
-                            variants={staggerChildVariants}
-                        >
+                        <motion.div key={product.title} variants={staggerChildVariants}>
                             <Link
                                 href={product.href}
                                 target='_blank'
@@ -104,9 +91,7 @@ export function FeaturedProducts() {
                                                 product.gradient
                                             }
                                         />
-                                        <Badge
-                                            className='absolute left-3 top-3'
-                                        >
+                                        <Badge className='absolute left-3 top-3'>
                                             {product.badge}
                                         </Badge>
                                     </div>

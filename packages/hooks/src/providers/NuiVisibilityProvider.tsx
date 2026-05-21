@@ -1,8 +1,15 @@
 'use client';
 
-import React, { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+    type PropsWithChildren,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
+} from 'react';
 import { isVisibilityExempt } from '../components';
-import { NuiVisibilityContext, NuiVisibilityContextValue } from '../contexts';
+import { NuiVisibilityContext, type NuiVisibilityContextValue } from '../contexts';
 import { useNuiEvent } from '../hooks';
 import { isDevBrowser, sendDevNuiEvent } from '../services/development';
 import { fetchNui } from '../services/fetchNui';
