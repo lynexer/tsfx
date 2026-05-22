@@ -1,5 +1,4 @@
-import type React from 'react';
-import { type PropsWithChildren, useEffect, useState } from 'react';
+import React, { type PropsWithChildren, useEffect, useState } from 'react';
 import { ThemeContext, type ThemeContextValue } from '@/contexts/theme-context';
 import { buildThemeRegistry, type Theme, type ThemeExtension, type ThemeMode } from '@/lib/themes';
 
