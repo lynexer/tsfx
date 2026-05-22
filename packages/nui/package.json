@@ -21,23 +21,23 @@
             "import": "./dist/themes/*.js",
             "require": "./dist/themes/*.cjs"
         },
-        "./styles/index.css": "./dist/styles/index.css"
+        "./styles/fonts": "./dist/styles/fonts/index.css",
+        "./styles/globals.css": "./dist/styles/globals.css"
     },
-    "files": ["dist"],
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "build": "tsup && pnpm build:css",
-        "build:css": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
+        "build": "tsup",
         "lint": "biome check --write ."
     },
     "devDependencies": {
         "@biomejs/biome": "^2.4.15",
         "@repo/biome-config": "workspace:*",
         "@repo/typescript-config": "workspace:*",
-        "@tailwindcss/cli": "^4.3.0",
         "@types/node": "^25.9.1",
         "@types/react": "^18.0.0",
         "@types/react-dom": "^18.0.0",
-        "postcss": "^8.5.15",
         "tsup": "^8.5.1",
         "typescript": "^5.9.3"
     },
