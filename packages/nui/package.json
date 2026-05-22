@@ -24,9 +24,7 @@
         "./styles/fonts": "./dist/styles/fonts/index.css",
         "./styles/globals.css": "./dist/styles/globals.css"
     },
-    "files": [
-        "dist"
-    ],
+    "files": ["dist"],
     "scripts": {
         "build": "tsup",
         "lint": "biome check --write ."
