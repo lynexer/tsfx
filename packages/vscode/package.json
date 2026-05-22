@@ -1,13 +1,35 @@
 {
-  "name": "vscode",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module"
+    "name": "@tsfx/vscode",
+    "displayName": "TSFX Extension",
+    "description": "VSCode extension for TSFX",
+    "version": "0.0.1",
+    "publisher": "tsfx",
+    "engines": {
+        "vscode": "^1.96.0"
+    },
+    "categories": ["Other"],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "tsfx.helloWorld",
+                "title": "Hello World",
+                "category": "TSFX"
+            }
+        ]
+    },
+    "scripts": {
+        "build": "tsc",
+        "watch": "tsc -w",
+        "lint": "biome check --write .",
+        "vscode:prepublish": "pnpm run build"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.4.15",
+        "@repo/biome-config": "workspace:*",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "^22.19.19",
+        "@types/vscode": "^1.96.0",
+        "typescript": "^5.8.3"
+    }
 }
