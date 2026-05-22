@@ -40,7 +40,7 @@ const buttonVariants = cva(
             },
             shape: {
                 default: '',
-                cicle: 'rounded-full'
+                circle: 'rounded-full'
             }
         },
         compoundVariants: [
