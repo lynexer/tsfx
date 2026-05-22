@@ -1,11 +1,34 @@
 {
     "name": "@tsfx/nui",
-    "version": "0.0.0",
+    "version": "0.0.1",
+    "type": "module",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs"
+        },
+        "./components/*": {
+            "types": "./dist/components/*.d.ts",
+            "import": "./dist/components/*.js",
+            "require": "./dist/components/*.cjs"
+        },
+        "./themes/*": {
+            "types": "./dist/themes/*.d.ts",
+            "import": "./dist/themes/*.js",
+            "require": "./dist/themes/*.cjs"
+        },
+        "./styles/globals.css": "./dist/styles/globals.css"
+    },
+
+    "files": ["dist"],
     "scripts": {
-        "build": "tsup src/index.ts --dts",
+        "build": "tsup",
         "lint": "biome check --write ."
     },
-    "license": "ISC",
     "devDependencies": {
         "@biomejs/biome": "^2.4.15",
         "@repo/biome-config": "workspace:*",
