@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { cpSync } from 'node:fs';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
@@ -21,8 +21,7 @@ export default defineConfig({
         options.jsx = 'automatic';
     },
     async onSuccess() {
-        mkdirSync('dist/styles', { recursive: true });
-        copyFileSync('src/styles/globals.css', 'dist/styles/globals.css');
-        console.log('✓ Copied globals.css to dist/styles/');
+        cpSync('src/styles', 'dist/styles', { recursive: true });
+        console.log('✓ Copied src/styles to dist/styles/');
     }
 });

@@ -21,6 +21,7 @@
             "import": "./dist/themes/*.js",
             "require": "./dist/themes/*.cjs"
         },
+        "./styles/fonts": "./dist/styles/fonts/index.css",
         "./styles/globals.css": "./dist/styles/globals.css"
     },
 
