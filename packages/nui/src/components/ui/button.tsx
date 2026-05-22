@@ -8,15 +8,24 @@ const buttonVariants = cva(
     {
         variants: {
             variant: {
-                default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-                outline:
-                    'border-border hover:bg-input/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-input/30',
-                secondary:
-                    'bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
-                ghost: 'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
-                destructive:
-                    'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
-                link: 'text-primary underline-offset-4 hover:underline'
+                default: 'hover:opacity-bg-80',
+                outline: 'border',
+                ghost: '',
+                link: 'underline-offset-4 hover:underline'
+            },
+            colour: {
+                primary: '',
+                info: '',
+                warning: '',
+                destructive: '',
+                accent: '',
+                secondary: '',
+                popover: '',
+                input: '',
+                muted: '',
+                success: '',
+                border: '',
+                ring: ''
             },
             size: {
                 default:
@@ -28,11 +37,271 @@ const buttonVariants = cva(
                 'icon-xs': "size-5 rounded-sm [&_svg:not([class*='size-'])]:size-2.5",
                 'icon-sm': "size-6 [&_svg:not([class*='size-'])]:size-3",
                 'icon-lg': "size-8 [&_svg:not([class*='size-'])]:size-4"
+            },
+            shape: {
+                default: '',
+                cicle: 'rounded-full'
             }
         },
+        compoundVariants: [
+            // Primary
+            {
+                variant: 'default',
+                colour: 'primary',
+                class: 'bg-primary text-primary-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'primary',
+                class: 'hover:bg-primary hover:text-primary-foreground border-primary'
+            },
+            {
+                variant: 'ghost',
+                colour: 'primary',
+                class: 'hover:bg-primary hover:text-primary-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'primary',
+                class: 'text-primary'
+            },
+            // Info
+            {
+                variant: 'default',
+                colour: 'info',
+                class: 'bg-info text-info-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'info',
+                class: 'hover:bg-info hover:text-info-foreground border-info'
+            },
+            {
+                variant: 'ghost',
+                colour: 'info',
+                class: 'hover:bg-info hover:text-info-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'info',
+                class: 'text-info'
+            },
+            // Warning
+            {
+                variant: 'default',
+                colour: 'warning',
+                class: 'bg-warning text-warning-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'warning',
+                class: 'hover:bg-warning hover:text-warning-foreground border-warning'
+            },
+            {
+                variant: 'ghost',
+                colour: 'warning',
+                class: 'hover:bg-warning hover:text-warning-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'warning',
+                class: 'text-warning'
+            },
+            // Destructive
+            {
+                variant: 'default',
+                colour: 'destructive',
+                class: 'bg-destructive text-destructive-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'destructive',
+                class: 'hover:bg-destructive hover:text-destructive-foreground border-destructive'
+            },
+            {
+                variant: 'ghost',
+                colour: 'destructive',
+                class: 'hover:bg-destructive hover:text-destructive-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'destructive',
+                class: 'text-destructive'
+            },
+            // Accent
+            {
+                variant: 'default',
+                colour: 'accent',
+                class: 'bg-accent text-accent-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'accent',
+                class: 'hover:bg-accent hover:text-accent-foreground border-accent'
+            },
+            {
+                variant: 'ghost',
+                colour: 'accent',
+                class: 'hover:bg-accent hover:text-accent-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'accent',
+                class: 'text-accent'
+            },
+            // Secondary
+            {
+                variant: 'default',
+                colour: 'secondary',
+                class: 'bg-secondary text-secondary-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'secondary',
+                class: 'hover:bg-secondary hover:text-secondary-foreground border-secondary'
+            },
+            {
+                variant: 'ghost',
+                colour: 'secondary',
+                class: 'hover:bg-secondary hover:text-secondary-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'secondary',
+                class: 'text-secondary'
+            },
+            // Popover
+            {
+                variant: 'default',
+                colour: 'popover',
+                class: 'bg-popover text-popover-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'popover',
+                class: 'hover:bg-popover hover:text-popover-foreground border-popover'
+            },
+            {
+                variant: 'ghost',
+                colour: 'popover',
+                class: 'hover:bg-popover hover:text-popover-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'popover',
+                class: 'text-popover'
+            },
+            // Input
+            {
+                variant: 'default',
+                colour: 'input',
+                class: 'bg-input text-input-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'input',
+                class: 'hover:bg-input hover:text-input-foreground border-input'
+            },
+            {
+                variant: 'ghost',
+                colour: 'input',
+                class: 'hover:bg-input hover:text-input-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'input',
+                class: 'text-input'
+            },
+            // Muted
+            {
+                variant: 'default',
+                colour: 'muted',
+                class: 'bg-muted text-muted-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'muted',
+                class: 'hover:bg-muted hover:text-muted-foreground border-muted'
+            },
+            {
+                variant: 'ghost',
+                colour: 'muted',
+                class: 'hover:bg-muted hover:text-muted-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'muted',
+                class: 'text-muted'
+            },
+            // Success
+            {
+                variant: 'default',
+                colour: 'success',
+                class: 'bg-success text-success-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'success',
+                class: 'hover:bg-success hover:text-success-foreground border-success'
+            },
+            {
+                variant: 'ghost',
+                colour: 'success',
+                class: 'hover:bg-success hover:text-success-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'success',
+                class: 'text-success'
+            },
+            // Border
+            {
+                variant: 'default',
+                colour: 'border',
+                class: 'bg-border text-border-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'border',
+                class: 'hover:bg-border hover:text-border-foreground border-border'
+            },
+            {
+                variant: 'ghost',
+                colour: 'border',
+                class: 'hover:bg-border hover:text-border-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'border',
+                class: 'text-border'
+            },
+            // Ring
+            {
+                variant: 'default',
+                colour: 'ring',
+                class: 'bg-ring text-ring-foreground'
+            },
+            {
+                variant: 'outline',
+                colour: 'ring',
+                class: 'hover:bg-ring hover:text-ring-foreground border-ring'
+            },
+            {
+                variant: 'ghost',
+                colour: 'ring',
+                class: 'hover:bg-ring hover:text-ring-foreground'
+            },
+            {
+                variant: 'link',
+                colour: 'ring',
+                class: 'text-ring'
+            }
+        ],
         defaultVariants: {
             variant: 'default',
-            size: 'default'
+            colour: 'primary',
+            size: 'default',
+            shape: 'default'
         }
     }
 );
@@ -40,13 +309,15 @@ const buttonVariants = cva(
 function Button({
     className,
     variant = 'default',
+    colour = 'primary',
     size = 'default',
+    shape = 'default',
     ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
     return (
         <ButtonPrimitive
             data-slot='button'
-            className={cn(buttonVariants({ variant, size, className }))}
+            className={cn(buttonVariants({ variant, colour, size, shape, className }))}
             {...props}
         />
     );
