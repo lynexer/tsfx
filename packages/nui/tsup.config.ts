@@ -16,11 +16,7 @@ export default defineConfig({
     sourcemap: true,
     clean: true,
     treeshake: true,
-    tsconfig: 'tsconfig.json',
     external: ['react', 'react-dom', 'tailwindcss'],
-    esbuildOptions(options) {
-        options.jsx = 'automatic';
-    },
     async onSuccess() {
         cpSync('src/styles', 'dist/styles', { recursive: true });
         console.log('✓ Copied src/styles to dist/styles/');
