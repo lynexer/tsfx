@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { PLATFORM_MAP } from './constants';
+import { readTlConfig } from './tlconfig';
 
 const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -92,16 +93,43 @@ export async function compile(
 }
 
 /**
- * Compiles all .tl files in a project using tlconfig.lua.
- * Equivalent to running `tl build` in the project root.
+ * Replicates `cyan build` / `tl build` by reading tlconfig.lua and calling
+ * `tl gen` on each listed source file. This avoids needing Cyan or LuaRocks.
  */
 export async function build(cwd: string = process.cwd()): Promise<CompileResult> {
-    const tl = getTlBinary();
-    try {
-        const { stdout, stderr } = await execFileAsync(tl, ['build'], { cwd });
-        return { ok: true, output: stdout + stderr };
-    } catch (err: unknown) {
-        const e = err as { stdout?: string; stderr?: string };
-        return { ok: false, output: (e.stdout ?? '') + (e.stderr ?? '') };
+    const config = readTlConfig(cwd);
+
+    const sourceDir = config.source_dir ?? '.';
+    const buildDir = config.build_dir ?? '.';
+    const files = config.files ?? [];
+
+    if (files.length === 0) {
+        return {
+            ok: false,
+            output: '[@tlfx/compiler] No files listed in tlconfig.lua.\n'
+        };
     }
+
+    const outDir = join(cwd, buildDir);
+    mkdirSync(outDir, { recursive: true });
+
+    const results = await Promise.all(
+        files.map((file) => {
+            const fullPath = join(cwd, sourceDir, file);
+            return compile(fullPath, { outDir });
+        })
+    );
+
+    const allOutput = results.map((r) => r.output).join('');
+    const allOk = results.every((r) => r.ok);
+
+    if (allOk) {
+        const compiled = results.map((r) => `  → ${r.outFile}`).join('\n');
+        return {
+            ok: true,
+            output: `${allOutput}\n[@tlfx/compiler] Built ${files.length} file(s):\n${compiled}\n`
+        };
+    }
+
+    return { ok: false, output: allOutput };
 }
