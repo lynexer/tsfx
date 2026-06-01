@@ -6,6 +6,7 @@
     "license": "MIT",
     "type": "module",
     "scripts": {
+        "build": "tsup",
         "lint": "biome check --write ."
     },
     "devDependencies": {
