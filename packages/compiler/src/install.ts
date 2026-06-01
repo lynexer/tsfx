@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, createWriteStream, existsSync, mkdirSync } from 'node:fs';
+import { chmodSync, createWriteStream, existsSync, mkdirSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
@@ -36,11 +36,14 @@ async function install(): Promise<void> {
 
     const res = await fetch(url, { redirect: 'follow' });
     if (!res.ok || !res.body) {
-        throw new Error(`Download Failed: ${res.status} ${res.statusText}`);
+        throw new Error(`Download failed: ${res.status} ${res.statusText}`);
     }
 
     const archivePath = join(BIN_DIR, platformInfo.asset);
     await pipeline(res.body, createWriteStream(archivePath));
+
+    const extractedDirName = platformInfo.asset.replace(/\.tar\.gz$/, '').replace(/\.zip$/, '');
+    const extractedBinaryPath = join(BIN_DIR, extractedDirName, platformInfo.exe);
 
     if (platformInfo.asset.endsWith('.tar.gz')) {
         execFileSync('tar', ['-xzf', archivePath, '-C', BIN_DIR]);
@@ -51,11 +54,20 @@ async function install(): Promise<void> {
         ]);
     }
 
+    if (!existsSync(extractedBinaryPath)) {
+        throw new Error(
+            `[@tlfx/compiler] Expected binary at ${extractedBinaryPath} after extraction, but it wasn't found. ` +
+                `The archive layout may have changed — please open an issue.`
+        );
+    }
+
+    renameSync(extractedBinaryPath, exePath);
+
     if (process.platform !== 'win32') {
         chmodSync(exePath, 0o755);
     }
 
-    console.log(`[teal-cfx] tl binary ready at ${exePath}`);
+    console.log(`[@tlfx/compiler] tl binary ready at ${exePath}`);
 }
 
 install().catch((err: unknown) => {

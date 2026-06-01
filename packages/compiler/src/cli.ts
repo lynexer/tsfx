@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import { build, check, compile, getTlBinary } from './index.js';
 
 const [, , command, ...args] = process.argv;
