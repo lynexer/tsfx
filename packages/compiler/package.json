@@ -1,6 +1,6 @@
 {
     "name": "@tlfx/compiler",
-    "version": "0.0.2",
+    "version": "0.0.4",
     "description": "Teal language compiler wrapper for FiveM (cfxlua) projects",
     "license": "MIT",
     "type": "module",
