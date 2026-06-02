@@ -37,3 +37,6 @@ dist/
 
 # compiler
 bin/
+
+# vscode
+**/types/fivem/*

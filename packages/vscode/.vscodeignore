@@ -1,6 +1,17 @@
-test
-node_modules
-out/
+# Source files (compiled to dist/)
 src/
+scripts/
 tsconfig.json
-biome.json
+
+# Dev deps
+node_modules/
+
+# Build artifacts that shouldn't be in VSIX
+.vscode-test/
+*.vsix
+*.map
+
+# Misc
+.gitignore
+.eslintrc*
+*.log

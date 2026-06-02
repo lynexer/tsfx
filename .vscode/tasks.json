@@ -9,7 +9,22 @@
             "options": {
                 "cwd": "${workspaceFolder}/packages/vscode"
             },
-            "problemMatcher": "$tsc-watch",
+            "problemMatcher": {
+                "owner": "tsup",
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(error|warning):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "CJS Build start",
+                    "endsPattern": "CJS ⚡️ Build success"
+                }
+            },
             "isBackground": true,
             "group": {
                 "kind": "build",

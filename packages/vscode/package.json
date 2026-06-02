@@ -5,31 +5,87 @@
     "version": "0.0.1",
     "publisher": "tsfx",
     "engines": {
-        "vscode": "^1.96.0"
+        "vscode": "^1.85.0"
     },
-    "categories": ["Other"],
-    "main": "./out/extension.js",
+    "categories": ["Programming Languages", "Linters"],
+    "main": "./dist/extension.js",
     "contributes": {
+        "languages": [
+            {
+                "id": "teal",
+                "aliases": ["Teal", "teal"],
+                "extensions": [".tl"],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "teal",
+                "scopeName": "source.teal",
+                "path": "./syntaxes/teal.tmLanguage.json"
+            }
+        ],
         "commands": [
             {
-                "command": "tsfx.helloWorld",
-                "title": "Hello World",
-                "category": "TSFX"
+                "command": "teal-fivem.checkFile",
+                "title": "Teal: Check Current File"
+            },
+            {
+                "command": "teal-fivem.showVersion",
+                "title": "Teal: Show Compiler Version"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "Teal for FiveM",
+            "properties": {
+                "teal-fivem.checkOnSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run tl check automatically when a .tl file is saved."
+                },
+                "teal-fivem.injectFiveMTypes": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically inject FiveM/cfxlua type definitions into the type checker."
+                },
+                "teal-fivem.tlConfigPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to a tlconfig.lua file. Defaults to workspace root if empty."
+                },
+                "teal-fivem.extraIncludeDirs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Additional directories to add to the Teal include path."
+                }
+            }
+        }
     },
     "scripts": {
-        "build": "tsc",
-        "watch": "tsc -w",
+        "vscode:prepublish": "pnpm run download-binaries && pnpm run build",
+        "build": "tsup",
+        "watch": "tsup --watch",
+        "package": "vsce package --no-dependencies",
         "lint": "biome check --write .",
-        "vscode:prepublish": "pnpm run build"
+        "download-binaries": "tsx --tsconfig tsconfig.scripts.json scripts/download-binaries.ts",
+        "gen-natives": "tsx --tsconfig tsconfig.scripts.json scripts/gen-natives.ts"
     },
     "devDependencies": {
         "@biomejs/biome": "^2.4.15",
+        "@citizenfx/client": "2.0.29753-1",
+        "@citizenfx/server": "2.0.29753-1",
         "@repo/biome-config": "workspace:*",
         "@repo/typescript-config": "workspace:*",
         "@types/node": "^22.19.19",
         "@types/vscode": "^1.96.0",
+        "tsup": "^8.5.1",
+        "tsx": "^4.22.4",
         "typescript": "^5.8.3"
+    },
+    "dependencies": {
+        "node-fetch": "^3.3.2"
     }
 }
