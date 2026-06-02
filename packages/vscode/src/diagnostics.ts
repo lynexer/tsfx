@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, isAbsolute, resolve as pathResolve } from 'node:path';
-import { Diagnostic, DiagnosticSeverity, Position, Range, Uri } from 'vscode';
+import { Diagnostic, DiagnosticSeverity, type OutputChannel, Position, Range, Uri } from 'vscode';
 
 export interface CheckOptions {
     binaryPath: string;
@@ -9,6 +9,7 @@ export interface CheckOptions {
     workspaceRoot: string | undefined;
     includeDirs: string[];
     tlConfigPath: string | undefined;
+    outputChannel: OutputChannel;
 }
 
 /**
@@ -52,7 +53,7 @@ function parseTealOutput(output: string): TealDiagnostic[] {
 
         diagnostics.push({
             file,
-            line: parseInt(lineStr, 10) - 1, // VSCode is 0-indexed
+            line: parseInt(lineStr, 10) - 1,
             col: parseInt(colStr, 10) - 1,
             severity,
             message
@@ -67,7 +68,8 @@ function parseTealOutput(output: string): TealDiagnostic[] {
  * May return diagnostics for multiple files if the checked file has dependencies.
  */
 export async function runCheck(options: CheckOptions): Promise<Map<string, Diagnostic[]>> {
-    const { binaryPath, filePath, workspaceRoot, includeDirs, tlConfigPath } = options;
+    const { binaryPath, filePath, workspaceRoot, includeDirs, tlConfigPath, outputChannel } =
+        options;
 
     const args: string[] = ['check'];
 
@@ -81,9 +83,13 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
 
     args.push(filePath);
 
+    const cwd = workspaceRoot ?? dirname(filePath);
+    outputChannel.appendLine(`[@tlfx/vscode] $ ${binaryPath} ${args.join(' ')}`);
+    outputChannel.appendLine(`[@tlfx/vscode] cwd: ${cwd}`);
+
     return new Promise((resolve) => {
         const proc = spawn(binaryPath, args, {
-            cwd: workspaceRoot ?? dirname(filePath),
+            cwd,
             env: process.env
         });
 
@@ -98,7 +104,11 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
             stderr += chunk.toString();
         });
 
-        proc.on('close', () => {
+        proc.on('close', (code) => {
+            outputChannel.appendLine(`[@tlfx/vscode] exit code: ${code}`);
+            if (stdout) outputChannel.appendLine(`[@tlfx/vscode] stdout: ${stdout.trim()}`);
+            if (stderr) outputChannel.appendLine(`[@tlfx/vscode] stderr: ${stderr.trim()}`);
+
             const combined = stderr + stdout;
             const parsed = parseTealOutput(combined);
             const resultMap = new Map<string, Diagnostic[]>();
@@ -129,6 +139,7 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
         });
 
         proc.on('error', (err) => {
+            outputChannel.appendLine(`[@tlfx/vscode] spawn error: ${err.message}`);
             const uri = Uri.file(filePath).toString();
             const diag = new Diagnostic(
                 new Range(0, 0, 0, 0),

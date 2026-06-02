@@ -3,6 +3,7 @@ import {
     type DiagnosticCollection,
     type ExtensionContext,
     languages,
+    type OutputChannel,
     type TextDocument,
     Uri,
     window,
@@ -13,9 +14,13 @@ import { runCheck } from './diagnostics';
 import { resolveIncludeDirs, resolveTlConfig } from './typePathManager';
 
 let diagnosticCollection: DiagnosticCollection;
+let outputChannel: OutputChannel;
 let binaryPath: string;
 
 export function activate(context: ExtensionContext): void {
+    outputChannel = window.createOutputChannel('Teal for FiveM');
+    context.subscriptions.push(outputChannel);
+
     diagnosticCollection = languages.createDiagnosticCollection('teal');
     context.subscriptions.push(diagnosticCollection);
 
@@ -23,9 +28,13 @@ export function activate(context: ExtensionContext): void {
     try {
         binaryPath = resolveBinaryPath(context.extensionPath);
         ensureExecutable(binaryPath);
+        outputChannel.appendLine(`[@tlfx/vscode] Activated. Binary: ${binaryPath}`);
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
+
+        outputChannel.appendLine(`[@tlfx/vscode] ERROR: ${msg}`);
         window.showErrorMessage(`[Teal for FiveM] ${msg}`);
+
         return;
     }
 
@@ -33,10 +42,12 @@ export function activate(context: ExtensionContext): void {
     context.subscriptions.push(
         commands.registerCommand('teal-fivem.checkFile', () => {
             const editor = window.activeTextEditor;
+
             if (!editor || editor.document.languageId !== 'teal') {
                 window.showWarningMessage('Open a .tl file to check.');
                 return;
             }
+
             checkDocument(editor.document, context.extensionPath);
         })
     );
@@ -44,6 +55,7 @@ export function activate(context: ExtensionContext): void {
     context.subscriptions.push(
         commands.registerCommand('teal-fivem.showVersion', async () => {
             const version = queryBinaryVersion(binaryPath);
+
             if (version) {
                 window.showInformationMessage(`Teal compiler: ${version}`);
             } else {
@@ -59,6 +71,7 @@ export function activate(context: ExtensionContext): void {
 
             const config = workspace.getConfiguration('teal-fivem');
             const checkOnSave = config.get<boolean>('checkOnSave', true);
+
             if (checkOnSave) {
                 checkDocument(doc, context.extensionPath);
             }
@@ -80,13 +93,12 @@ export function activate(context: ExtensionContext): void {
             checkDocument(doc, context.extensionPath);
         }
     }
-
-    console.log('[teal-fivem] Activated. Binary:', binaryPath);
 }
 
 export function deactivate(): void {
     diagnosticCollection?.clear();
     diagnosticCollection?.dispose();
+    outputChannel?.dispose();
 }
 
 // ---------------------------------------------------------------------------
@@ -103,17 +115,24 @@ async function checkDocument(doc: TextDocument, extensionPath: string): Promise<
 
     const tlConfigPath = resolveTlConfig(tlConfigSetting, workspaceRoot);
 
+    outputChannel.appendLine(`[@tlfx/vscode] Checking: ${doc.uri.fsPath}`);
+
     const resultMap = await runCheck({
         binaryPath,
         filePath: doc.uri.fsPath,
         workspaceRoot,
         includeDirs,
-        tlConfigPath
+        tlConfigPath,
+        outputChannel
     });
 
     diagnosticCollection.delete(doc.uri);
 
+    let diagCount = 0;
     for (const [uriStr, diags] of resultMap) {
         diagnosticCollection.set(Uri.parse(uriStr), diags);
+        diagCount += diags.length;
     }
+
+    outputChannel.appendLine(`[@tlfx/vscode] Done. ${diagCount} diagnostic(s) found.`);
 }
