@@ -31,11 +31,21 @@ const ROOT = join(__dirname, '..');
 // ---------------------------------------------------------------------------
 
 /**
- * Maps a TypeScript parameter/return type string to its Teal equivalent.
- * The .d.ts files use: number, boolean, string, void, string | number, Vector3
+ * Maps a TypeScript type string to its Teal equivalent.
+ *
+ * Handles:
+ *   number, boolean, string, void, any, Vector3
+ *   string | number  -> Hash
+ *   function types   -> function(...): any  (Teal has no arrow syntax)
+ *   tuple types      -> any  (Teal has no tuple syntax)
+ *   everything else  -> any
  */
 function tsTypeToTeal(tsType: string): string {
     const t = tsType.trim();
+
+    if (t.includes('=>')) return 'function';
+
+    if (t.startsWith('[')) return 'any';
 
     switch (t) {
         case 'void':
@@ -44,15 +54,15 @@ function tsTypeToTeal(tsType: string): string {
             return 'boolean';
         case 'string':
             return 'string';
+        case 'number':
+            return 'number';
+        case 'any':
+            return 'any';
         case 'Vector3':
             return 'vector3';
         case 'string | number':
         case 'number | string':
             return 'Hash';
-        case 'number':
-            return 'number';
-        case 'any':
-            return 'any';
         default:
             return 'any';
     }
@@ -69,11 +79,76 @@ interface ParsedNative {
     doc: string;
 }
 
-const DECLARE_FUNC_RE = /^declare function ([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\)\s*:\s*([^;]+);/;
+/**
+ * Splits a parameter list string on top-level commas only,
+ * correctly handling nested parens and brackets.
+ *
+ * e.g. "ped: number, cb: (result: string) => void, flags: number"
+ *   -> ["ped: number", "cb: (result: string) => void", "flags: number"]
+ */
+function splitParams(raw: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let current = '';
+
+    for (const ch of raw) {
+        if (ch === '(' || ch === '[' || ch === '<') {
+            depth++;
+            current += ch;
+        } else if (ch === ')' || ch === ']' || ch === '>') {
+            depth--;
+            current += ch;
+        } else if (ch === ',' && depth === 0) {
+            parts.push(current.trim());
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+
+    if (current.trim()) parts.push(current.trim());
+    return parts;
+}
+
+/**
+ * Extracts the outermost param list and return type from a declare function
+ * line, correctly handling nested parens in callback parameter types.
+ *
+ * Returns null if the line is not a declare function.
+ */
+function parseDeclare(line: string): { name: string; rawParams: string; rawReturn: string } | null {
+    const nameMatch = /^declare function ([A-Za-z_][A-Za-z0-9_]*)\(/.exec(line);
+    if (!nameMatch) return null;
+
+    const name = nameMatch[1];
+    let depth = 0;
+    const paramStart = line.indexOf('(');
+    let paramEnd = -1;
+
+    for (let i = paramStart; i < line.length; i++) {
+        if (line[i] === '(') depth++;
+        else if (line[i] === ')') {
+            depth--;
+            if (depth === 0) {
+                paramEnd = i;
+                break;
+            }
+        }
+    }
+
+    if (paramEnd === -1) return null;
+
+    const rawParams = line.slice(paramStart + 1, paramEnd);
+
+    const afterParen = line.slice(paramEnd + 1).trim();
+    const returnMatch = /^:\s*([^;]+);/.exec(afterParen);
+    if (!returnMatch) return null;
+
+    return { name, rawParams, rawReturn: returnMatch[1].trim() };
+}
 
 /**
  * Parse all `declare function` statements from a .d.ts file.
- * Collects JSDoc comment blocks immediately preceding each declaration.
  */
 function parseDts(filePath: string): Map<string, ParsedNative> {
     const content = readFileSync(filePath, 'utf8');
@@ -100,9 +175,7 @@ function parseDts(filePath: string): Map<string, ParsedNative> {
             continue;
         }
 
-        const match = DECLARE_FUNC_RE.exec(line);
-
-        if (!match) {
+        if (!line.startsWith('declare function')) {
             if (line !== '' && !line.startsWith('*') && !line.startsWith('/')) {
                 pendingDoc = '';
             }
@@ -110,7 +183,13 @@ function parseDts(filePath: string): Map<string, ParsedNative> {
             continue;
         }
 
-        const [, funcName, rawParams, rawReturn] = match;
+        const parsed = parseDeclare(line);
+        if (!parsed) {
+            pendingDoc = '';
+            continue;
+        }
+
+        const { name: funcName, rawParams, rawReturn } = parsed;
 
         if (funcName.startsWith('N_0x') || funcName.startsWith('n_0x')) {
             pendingDoc = '';
@@ -118,16 +197,17 @@ function parseDts(filePath: string): Map<string, ParsedNative> {
         }
 
         const params: { name: string; type: string }[] = [];
-
         if (rawParams.trim()) {
-            for (const param of rawParams.split(',')) {
-                const colonIdx = param.lastIndexOf(':');
+            for (const param of splitParams(rawParams)) {
+                const colonIdx = param.indexOf(':');
                 if (colonIdx === -1) continue;
 
                 const paramName = param
                     .slice(0, colonIdx)
                     .trim()
-                    .replace(/^\.\.\./, '');
+                    .replace(/^\.\.\./, '')
+                    .replace(/\?$/, '');
+
                 const paramType = param.slice(colonIdx + 1).trim();
 
                 if (paramName) {
@@ -136,9 +216,10 @@ function parseDts(filePath: string): Map<string, ParsedNative> {
             }
         }
 
-        const returnType = tsTypeToTeal(rawReturn.trim());
+        const returnType = tsTypeToTeal(rawReturn);
 
         let doc = '';
+
         if (pendingDoc) {
             const summaryMatch = pendingDoc.match(/\*\s+([^@\n*][^\n]+)/);
 
@@ -161,11 +242,9 @@ function parseDts(filePath: string): Map<string, ParsedNative> {
 function buildTealDecl(native: ParsedNative): string {
     const params = native.params
         .map((p) => {
-            const safeName = /^(end|do|then|local|function|return|type|record|enum|goto)$/.test(
-                p.name
-            )
-                ? `${p.name}_`
-                : p.name;
+            const RESERVED =
+                /^(and|break|do|else|elseif|end|false|for|function|goto|if|in|local|nil|not|or|repeat|return|then|true|until|while|record|enum|type|global|where)$/;
+            const safeName = RESERVED.test(p.name) ? `${p.name}_` : p.name;
 
             return `${safeName}: ${p.type}`;
         })
@@ -179,20 +258,6 @@ function buildTealDecl(native: ParsedNative): string {
     const decl = `global ${native.name}: ${sig}`;
     return native.doc ? `-- ${native.doc}\n${decl}` : decl;
 }
-
-function writeFile(outPath: string, context: string, declarations: string[]): void {
-    const header =
-        `-- natives_${context}.d.tl\n` +
-        `-- Auto-generated by scripts/gen-natives.ts\n` +
-        `-- Source: @citizenfx/${context === 'shared' ? 'client + server' : context}\n` +
-        `-- DO NOT EDIT MANUALLY — re-run pnpm gen-natives to update.\n\n`;
-
-    writeFileSync(outPath, `${header + declarations.join('\n\n')}\n`, 'utf8');
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 
 function resolvePackageDts(pkg: string, filename: string): string {
     const candidate = join(ROOT, 'node_modules', pkg, filename);
@@ -240,14 +305,53 @@ async function main(): Promise<void> {
         `  Shared: ${shared.length}, client-only: ${clientOnly.length}, server-only: ${serverOnly.length}`
     );
 
+    const cfxPath = join(ROOT, 'types', 'fivem', 'cfx.d.tl');
+
+    if (!existsSync(cfxPath)) {
+        throw new Error(
+            `cfx.d.tl not found at ${cfxPath}. It should be committed to types/fivem/.`
+        );
+    }
+
+    const cfxContent = readFileSync(cfxPath, 'utf8');
+
     const outDir = join(ROOT, 'types', 'fivem');
     mkdirSync(outDir, { recursive: true });
 
-    writeFile(join(outDir, 'natives_shared.d.tl'), 'shared', shared.map(buildTealDecl));
-    writeFile(join(outDir, 'natives_client.d.tl'), 'client', clientOnly.map(buildTealDecl));
-    writeFile(join(outDir, 'natives_server.d.tl'), 'server', serverOnly.map(buildTealDecl));
+    const header =
+        `-- fivem.d.tl\n` +
+        `-- Auto-generated by scripts/gen-natives.ts — DO NOT EDIT MANUALLY.\n` +
+        `-- Contains: cfx core globals + all client, server, and shared natives.\n` +
+        `-- Pass as: tl check --include-dir <types/fivem> --global-env-def fivem\n\n`;
 
-    console.log(`\nWrote files to ${outDir}`);
+    const sections = [
+        '-- ============================================================',
+        '-- cfx core (Citizen, exports, events, vectors, handle aliases)',
+        '-- ============================================================',
+        cfxContent.trim(),
+        '',
+        '-- ============================================================',
+        '-- Shared natives (available in both client and server)',
+        '-- ============================================================',
+        ...shared.map(buildTealDecl),
+        '',
+        '-- ============================================================',
+        '-- Client-only natives',
+        '-- ============================================================',
+        ...clientOnly.map(buildTealDecl),
+        '',
+        '-- ============================================================',
+        '-- Server-only natives',
+        '-- ============================================================',
+        ...serverOnly.map(buildTealDecl)
+    ];
+
+    const outPath = join(outDir, 'fivem.d.tl');
+    writeFileSync(outPath, header + sections.join('\n'), 'utf8');
+
+    console.log(
+        `\nWrote ${shared.length + clientOnly.length + serverOnly.length} natives → ${outPath}`
+    );
     console.log('Done.');
 }
 

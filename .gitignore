@@ -39,4 +39,4 @@ dist/
 bin/
 
 # vscode
-**/types/fivem/*
+**/types/fivem/fivem.d.tl

@@ -3,20 +3,24 @@ import { isAbsolute, join } from 'node:path';
 
 /**
  * Returns the absolute path to the bundled FiveM type definitions directory.
- * Structure expected:
- *   <extensionRoot>/types/fivem/
- *     cfx.d.tl          -- Citizen, exports, etc.
- *     natives_client.d.tl
- *     natives_server.d.tl
- *     natives_shared.d.tl
  */
 export function getFiveMTypesDir(extensionRoot: string): string {
     return join(extensionRoot, 'types', 'fivem');
 }
 
 /**
+ * Returns the single --global-env-def module name for the merged FiveM
+ * type definition file (fivem.d.tl). Returns null if the file doesn't exist
+ * yet (i.e. gen-natives hasn't been run).
+ */
+export function getFiveMGlobalEnvDef(extensionRoot: string): string | null {
+    const fivemDtl = join(extensionRoot, 'types', 'fivem', 'fivem.d.tl');
+    return existsSync(fivemDtl) ? 'fivem' : null;
+}
+
+/**
  * Returns all include directories that should be passed to `tl check`.
- * Merges the bundled FiveM types with any user-configured extra dirs.
+ * Merges the bundled FiveM types dir with any user-configured extra dirs.
  */
 export function resolveIncludeDirs(
     extensionRoot: string,

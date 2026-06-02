@@ -11,7 +11,7 @@ import {
 } from 'vscode';
 import { ensureExecutable, queryBinaryVersion, resolveBinaryPath } from './binaryResolver';
 import { runCheck } from './diagnostics';
-import { resolveIncludeDirs, resolveTlConfig } from './typePathManager';
+import { getFiveMGlobalEnvDef, resolveIncludeDirs, resolveTlConfig } from './typePathManager';
 
 let diagnosticCollection: DiagnosticCollection;
 let outputChannel: OutputChannel;
@@ -78,7 +78,7 @@ export function activate(context: ExtensionContext): void {
         })
     );
 
-    // --- Open hook: check already-open teal files ---
+    // --- Open hook ---
     context.subscriptions.push(
         workspace.onDidOpenTextDocument((doc) => {
             if (doc.languageId === 'teal') {
@@ -87,7 +87,6 @@ export function activate(context: ExtensionContext): void {
         })
     );
 
-    // Check any .tl files already open when the extension activates
     for (const doc of workspace.textDocuments) {
         if (doc.languageId === 'teal') {
             checkDocument(doc, context.extensionPath);
@@ -113,6 +112,14 @@ async function checkDocument(doc: TextDocument, extensionPath: string): Promise<
 
     const includeDirs = resolveIncludeDirs(extensionPath, injectFiveMTypes, extraDirs);
 
+    const globalEnvDef = injectFiveMTypes ? getFiveMGlobalEnvDef(extensionPath) : null;
+
+    if (injectFiveMTypes && !globalEnvDef) {
+        outputChannel.appendLine(
+            `[@tlfx/vscode] WARNING: fivem.d.tl not found — run 'pnpm gen-natives' to generate FiveM type definitions.`
+        );
+    }
+
     const tlConfigPath = resolveTlConfig(tlConfigSetting, workspaceRoot);
 
     outputChannel.appendLine(`[@tlfx/vscode] Checking: ${doc.uri.fsPath}`);
@@ -122,6 +129,7 @@ async function checkDocument(doc: TextDocument, extensionPath: string): Promise<
         filePath: doc.uri.fsPath,
         workspaceRoot,
         includeDirs,
+        globalEnvDef,
         tlConfigPath,
         outputChannel
     });

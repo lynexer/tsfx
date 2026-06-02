@@ -8,6 +8,7 @@ export interface CheckOptions {
     filePath: string;
     workspaceRoot: string | undefined;
     includeDirs: string[];
+    globalEnvDef: string | null;
     tlConfigPath: string | undefined;
     outputChannel: OutputChannel;
 }
@@ -21,8 +22,6 @@ interface TealDiagnostic {
 }
 
 // Matches tl's actual output: file.tl:LINE:COL: message
-// tl does NOT inline a severity word — severity is determined by which
-// section the line appears in ("N warning(s)" / "N error(s)" header).
 const DIAG_LINE_PATTERN = /^(.+\.tl):(\d+):(\d+):\s+(.+)$/;
 
 // Section headers that tell us what severity the following lines are
@@ -30,15 +29,36 @@ const WARNING_SECTION = /^\d+\s+warning/i;
 const ERROR_SECTION = /^\d+\s+error/i;
 
 /**
- * Parses tl's stderr output into structured diagnostics.
+ * Tries to extract the token being reported on from a tl diagnostic message
+ * so we can produce a correctly-sized underline range.
  *
- * tl groups diagnostics under section headers:
- *   "1 warning:" / "2 warnings:"  -> warnings follow
- *   "1 error:"   / "2 errors:"    -> errors follow
+ * tl messages follow patterns like:
+ *   "unused variable x: string"           -> token is "x"
+ *   "in local declaration: x: got ..."    -> token is "x"
+ *   "unknown variable: AddEventHandler"   -> token is "AddEventHandler"
+ *   "argument 1: got X, expected Y"       -> no extractable token, use col+1
  */
+function extractTokenLength(message: string): number | null {
+    const unusedMatch = /^unused variable ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
+    if (unusedMatch) return unusedMatch[1].length;
+
+    const localDeclMatch = /^in local declaration: ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
+    if (localDeclMatch) return localDeclMatch[1].length;
+
+    const unknownVarMatch = /^unknown variable: ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
+    if (unknownVarMatch) return unknownVarMatch[1].length;
+
+    const unknownTypeMatch = /^unknown type: ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
+    if (unknownTypeMatch) return unknownTypeMatch[1].length;
+
+    const redeclareMatch = /^cannot redeclare ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
+    if (redeclareMatch) return redeclareMatch[1].length;
+
+    return null;
+}
+
 function parseTealOutput(output: string): TealDiagnostic[] {
     const diagnostics: TealDiagnostic[] = [];
-
     let currentSeverity: DiagnosticSeverity = DiagnosticSeverity.Error;
 
     for (const line of output.split('\n')) {
@@ -71,18 +91,25 @@ function parseTealOutput(output: string): TealDiagnostic[] {
     return diagnostics;
 }
 
-/**
- * Runs `tl check` on a file and returns a map of URI -> diagnostics.
- * May return diagnostics for multiple files if the checked file has dependencies.
- */
 export async function runCheck(options: CheckOptions): Promise<Map<string, Diagnostic[]>> {
-    const { binaryPath, filePath, workspaceRoot, includeDirs, tlConfigPath, outputChannel } =
-        options;
+    const {
+        binaryPath,
+        filePath,
+        workspaceRoot,
+        includeDirs,
+        globalEnvDef,
+        tlConfigPath,
+        outputChannel
+    } = options;
 
     const args: string[] = ['check'];
 
     for (const dir of includeDirs) {
         args.push('--include-dir', dir);
+    }
+
+    if (globalEnvDef) {
+        args.push('--global-env-def', globalEnvDef);
     }
 
     if (tlConfigPath && existsSync(tlConfigPath)) {
@@ -96,10 +123,7 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
     outputChannel.appendLine(`[@tlfx/vscode] cwd: ${cwd}`);
 
     return new Promise((resolve) => {
-        const proc = spawn(binaryPath, args, {
-            cwd,
-            env: process.env
-        });
+        const proc = spawn(binaryPath, args, { cwd, env: process.env });
 
         let stdout = '';
         let stderr = '';
@@ -117,8 +141,7 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
             if (stdout) outputChannel.appendLine(`[@tlfx/vscode] stdout: ${stdout.trim()}`);
             if (stderr) outputChannel.appendLine(`[@tlfx/vscode] stderr: ${stderr.trim()}`);
 
-            const combined = stderr + stdout;
-            const parsed = parseTealOutput(combined);
+            const parsed = parseTealOutput(stderr + stdout);
             const resultMap = new Map<string, Diagnostic[]>();
 
             for (const d of parsed) {
@@ -127,14 +150,12 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
                     : pathResolve(workspaceRoot ?? dirname(filePath), d.file);
 
                 const uri = Uri.file(absPath).toString();
+                if (!resultMap.has(uri)) resultMap.set(uri, []);
 
-                if (!resultMap.has(uri)) {
-                    resultMap.set(uri, []);
-                }
-
+                const tokenLen = extractTokenLength(d.message) ?? 1;
                 const range = new Range(
                     new Position(d.line, d.col),
-                    new Position(d.line, d.col + 1)
+                    new Position(d.line, d.col + tokenLen)
                 );
 
                 const diag = new Diagnostic(range, d.message, d.severity);

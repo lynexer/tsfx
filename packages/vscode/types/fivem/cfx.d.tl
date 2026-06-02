@@ -14,42 +14,32 @@ global record Citizen
   GetResourceState: function(resourceName: string): string
 
   -- Invokation
-  InvokeNative: function(hash: string | integer, ...: any): any
+  InvokeNative: function(hash: any, ...: any): any
 
   -- Networking / replication
   Trace: function(msg: string)
 end
 
--- AddEventHandler is a top-level global
-global AddEventHandler: function(eventName: string, handler: function(...: any))
+-- Variadic event/trigger globals use ...: any for extra payload args
+global AddEventHandler: function(eventName: string, handler: function)
+global RemoveEventHandler: function(eventName: string, handler: function)
 
--- RemoveEventHandler
-global RemoveEventHandler: function(eventName: string, handler: function(...: any))
-
--- TriggerEvent (shared/local)
 global TriggerEvent: function(eventName: string, ...: any)
-
--- TriggerServerEvent (client-side only)
 global TriggerServerEvent: function(eventName: string, ...: any)
-
--- TriggerClientEvent (server-side only)
 global TriggerClientEvent: function(eventName: string, source: integer, ...: any)
-
--- TriggerNetEvent (alias used in some contexts)
 global TriggerNetEvent: function(eventName: string, ...: any)
 
--- RegisterNetEvent
-global RegisterNetEvent: function(eventName: string, handler?: function(...: any))
+-- handler is optional — RegisterNetEvent can be called with just the event name
+global RegisterNetEvent: function(eventName: string, handler?: function)
 
 -- exports object: allows calling exports from other resources
--- Usage: exports["resource-name"]:FunctionName(args)
--- Typed loosely as a table of tables since resource exports are dynamic.
+-- Typed loosely since resource exports are dynamic
 global exports: {string: {string: function}}
 
--- print override (same as Lua standard but aliased here for completeness)
+-- Standard globals available in cfxlua
 global print: function(...: any)
 
--- Teal-compatible type for FiveM's vector types
+-- Vector types
 global record vector2
   x: number
   y: number
@@ -68,27 +58,19 @@ global record vector4
   w: number
 end
 
--- Common hash type alias used throughout native signatures
-global type Hash = integer
-
--- Entity handle (integer under the hood)
+-- Type aliases for native handle types (all integers under the hood)
+global type Hash   = integer
 global type Entity = integer
 global type Player = integer
-global type Ped = integer
+global type Ped    = integer
 global type Vehicle = integer
-global type Object = integer
-global type Blip = integer
-global type Cam = integer
-global type Pickup = integer
+global type Object  = integer
+global type Blip    = integer
+global type Cam     = integer
+global type Pickup  = integer
 
--- GetInvokingResource: returns the resource that triggered the current event (server-side)
+-- Server-side globals
 global GetInvokingResource: function(): string
-
--- GetPlayerIdentifier (server-side)
-global GetPlayerIdentifier: function(source: integer, index?: integer): string
-
--- GetNumPlayerIdentifiers (server-side)
+global GetPlayerIdentifier: function(source: integer, index: integer): string
 global GetNumPlayerIdentifiers: function(source: integer): integer
-
--- source global (server-side: the player that triggered the event)
 global source: integer
