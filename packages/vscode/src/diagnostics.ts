@@ -12,11 +12,6 @@ export interface CheckOptions {
     outputChannel: OutputChannel;
 }
 
-/**
- * Parsed representation of a single tl error/warning line.
- * tl outputs lines in the format:
- *   filename.tl:LINE:COL: <type>: message
- */
 interface TealDiagnostic {
     file: string;
     line: number;
@@ -25,37 +20,50 @@ interface TealDiagnostic {
     message: string;
 }
 
-// Matches: path/to/file.tl:10:5: error: some message
-//      or: path/to/file.tl:10:5: warning: some message
-const DIAG_PATTERN = /^(.+\.tl):(\d+):(\d+):\s+(error|warning|unknown symbol):\s+(.+)$/;
+// Matches tl's actual output: file.tl:LINE:COL: message
+// tl does NOT inline a severity word — severity is determined by which
+// section the line appears in ("N warning(s)" / "N error(s)" header).
+const DIAG_LINE_PATTERN = /^(.+\.tl):(\d+):(\d+):\s+(.+)$/;
+
+// Section headers that tell us what severity the following lines are
+const WARNING_SECTION = /^\d+\s+warning/i;
+const ERROR_SECTION = /^\d+\s+error/i;
 
 /**
- * Parses tl's stderr/stdout output into structured diagnostics.
+ * Parses tl's stderr output into structured diagnostics.
+ *
+ * tl groups diagnostics under section headers:
+ *   "1 warning:" / "2 warnings:"  -> warnings follow
+ *   "1 error:"   / "2 errors:"    -> errors follow
  */
 function parseTealOutput(output: string): TealDiagnostic[] {
     const diagnostics: TealDiagnostic[] = [];
+
+    let currentSeverity: DiagnosticSeverity = DiagnosticSeverity.Error;
 
     for (const line of output.split('\n')) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        const match = DIAG_PATTERN.exec(trimmed);
+        if (WARNING_SECTION.test(trimmed)) {
+            currentSeverity = DiagnosticSeverity.Warning;
+            continue;
+        }
+        if (ERROR_SECTION.test(trimmed)) {
+            currentSeverity = DiagnosticSeverity.Error;
+            continue;
+        }
+
+        const match = DIAG_LINE_PATTERN.exec(trimmed);
         if (!match) continue;
 
-        const [, file, lineStr, colStr, severityStr, message] = match;
-
-        let severity: DiagnosticSeverity;
-        if (severityStr === 'warning') {
-            severity = DiagnosticSeverity.Warning;
-        } else {
-            severity = DiagnosticSeverity.Error;
-        }
+        const [, file, lineStr, colStr, message] = match;
 
         diagnostics.push({
             file,
             line: parseInt(lineStr, 10) - 1,
             col: parseInt(colStr, 10) - 1,
-            severity,
+            severity: currentSeverity,
             message
         });
     }
@@ -140,6 +148,7 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
 
         proc.on('error', (err) => {
             outputChannel.appendLine(`[@tlfx/vscode] spawn error: ${err.message}`);
+
             const uri = Uri.file(filePath).toString();
             const diag = new Diagnostic(
                 new Range(0, 0, 0, 0),
