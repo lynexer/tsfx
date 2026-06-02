@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve as pathResolve } from 'node:path';
 import { Diagnostic, DiagnosticSeverity, type OutputChannel, Position, Range, Uri } from 'vscode';
 
@@ -21,40 +21,91 @@ interface TealDiagnostic {
     message: string;
 }
 
-// Matches tl's actual output: file.tl:LINE:COL: message
 const DIAG_LINE_PATTERN = /^(.+\.tl):(\d+):(\d+):\s+(.+)$/;
-
-// Section headers that tell us what severity the following lines are
 const WARNING_SECTION = /^\d+\s+warning/i;
 const ERROR_SECTION = /^\d+\s+error/i;
 
 /**
- * Tries to extract the token being reported on from a tl diagnostic message
- * so we can produce a correctly-sized underline range.
- *
- * tl messages follow patterns like:
- *   "unused variable x: string"           -> token is "x"
- *   "in local declaration: x: got ..."    -> token is "x"
- *   "unknown variable: AddEventHandler"   -> token is "AddEventHandler"
- *   "argument 1: got X, expected Y"       -> no extractable token, use col+1
+ * Scans forward from `col` in the given source line to find the length of the
+ * token at that position. Handles:
+ *   - identifiers:       [A-Za-z_][A-Za-z0-9_]*
+ *   - integer literals:  [0-9]+
+ *   - float literals:    [0-9]+\.[0-9]*  or  [0-9]*\.[0-9]+
+ *   - hex literals:      0x[0-9A-Fa-f]+
+ *   - string literals:   "..." or '...' (single-line, escaped chars handled)
+ *   - falls back to 1 for anything else
  */
-function extractTokenLength(message: string): number | null {
-    const unusedMatch = /^unused variable ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
-    if (unusedMatch) return unusedMatch[1].length;
+function measureToken(sourceLine: string, col: number): number {
+    if (col >= sourceLine.length) return 1;
 
-    const localDeclMatch = /^in local declaration: ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
-    if (localDeclMatch) return localDeclMatch[1].length;
+    const ch = sourceLine[col];
 
-    const unknownVarMatch = /^unknown variable: ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
-    if (unknownVarMatch) return unknownVarMatch[1].length;
+    if (ch === '"' || ch === "'") {
+        const quote = ch;
+        let i = col + 1;
+        while (i < sourceLine.length) {
+            if (sourceLine[i] === '\\') {
+                i += 2;
+            } else if (sourceLine[i] === quote) {
+                return i - col + 1;
+            } else {
+                i++;
+            }
+        }
+        return sourceLine.length - col;
+    }
 
-    const unknownTypeMatch = /^unknown type: ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
-    if (unknownTypeMatch) return unknownTypeMatch[1].length;
+    if (ch === '0' && sourceLine[col + 1]?.toLowerCase() === 'x') {
+        let i = col + 2;
+        while (i < sourceLine.length && /[0-9A-Fa-f_]/.test(sourceLine[i])) i++;
+        return i - col;
+    }
 
-    const redeclareMatch = /^cannot redeclare ([A-Za-z_][A-Za-z0-9_]*)/.exec(message);
-    if (redeclareMatch) return redeclareMatch[1].length;
+    if (/[0-9]/.test(ch) || (ch === '.' && /[0-9]/.test(sourceLine[col + 1] ?? ''))) {
+        let i = col;
+        while (i < sourceLine.length && /[0-9]/.test(sourceLine[i])) i++;
 
-    return null;
+        if (sourceLine[i] === '.') {
+            i++;
+            while (i < sourceLine.length && /[0-9]/.test(sourceLine[i])) i++;
+        }
+
+        if (sourceLine[i]?.toLowerCase() === 'e') {
+            i++;
+            if (sourceLine[i] === '+' || sourceLine[i] === '-') i++;
+            while (i < sourceLine.length && /[0-9]/.test(sourceLine[i])) i++;
+        }
+
+        return i - col;
+    }
+
+    if (/[A-Za-z_]/.test(ch)) {
+        let i = col + 1;
+        while (i < sourceLine.length && /[A-Za-z0-9_]/.test(sourceLine[i])) i++;
+
+        return i - col;
+    }
+
+    return 1;
+}
+
+/**
+ * Cache of file contents keyed by absolute path, populated on first access.
+ * Cleared between check runs so edits are picked up.
+ */
+const sourceCache = new Map<string, string[]>();
+
+function getSourceLines(filePath: string): string[] {
+    if (!sourceCache.has(filePath)) {
+        try {
+            const content = readFileSync(filePath, 'utf8');
+            sourceCache.set(filePath, content.split('\n'));
+        } catch {
+            sourceCache.set(filePath, []);
+        }
+    }
+
+    return sourceCache.get(filePath)!;
 }
 
 function parseTealOutput(output: string): TealDiagnostic[] {
@@ -101,6 +152,8 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
         tlConfigPath,
         outputChannel
     } = options;
+
+    sourceCache.clear();
 
     const args: string[] = ['check'];
 
@@ -152,16 +205,19 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
                 const uri = Uri.file(absPath).toString();
                 if (!resultMap.has(uri)) resultMap.set(uri, []);
 
-                const tokenLen = extractTokenLength(d.message) ?? 1;
+                const sourceLines = getSourceLines(absPath);
+                const sourceLine = sourceLines[d.line] ?? '';
+                const tokenLen = measureToken(sourceLine, d.col);
+
                 const range = new Range(
                     new Position(d.line, d.col),
                     new Position(d.line, d.col + tokenLen)
                 );
 
                 const diag = new Diagnostic(range, d.message, d.severity);
-
                 diag.source = 'teal';
-                resultMap.get(uri)?.push(diag);
+
+                resultMap.get(uri)!.push(diag);
             }
 
             resolve(resultMap);
