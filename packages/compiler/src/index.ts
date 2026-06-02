@@ -16,7 +16,7 @@ export interface CompileResult {
 }
 
 export interface CompileOptions {
-    outDir?: string;
+    outFile?: string;
 }
 
 /**
@@ -73,18 +73,14 @@ export async function compile(
     options: CompileOptions = {}
 ): Promise<CompileResult> {
     const tl = getTlBinary();
-    const args = ['gen', filePath];
+    const outFile = options.outFile ?? filePath.replace(/\.tl$/, '.lua');
 
-    if (options.outDir) {
-        args.push('--output-dir', options.outDir);
+    if (options.outFile) {
+        mkdirSync(dirname(options.outFile), { recursive: true });
     }
 
     try {
-        const { stdout, stderr } = await execFileAsync(tl, args);
-        const outFile = options.outDir
-            ? filePath.replace(/\.tl$/, '.lua').replace(/^.*[\\/]/, `${options.outDir}/`)
-            : filePath.replace(/\.tl$/, '.lua');
-
+        const { stdout, stderr } = await execFileAsync(tl, ['gen', filePath, '-o', outFile]);
         return { ok: true, output: stdout + stderr, outFile };
     } catch (err: unknown) {
         const e = err as { stdout?: string; stderr?: string };
@@ -93,8 +89,8 @@ export async function compile(
 }
 
 /**
- * Replicates `cyan build` / `tl build` by reading tlconfig.lua and calling
- * `tl gen` on each listed source file. This avoids needing Cyan or LuaRocks.
+ * Builds a project by reading tlconfig.lua and calling `tl gen -o` per file,
+ * mirroring the source_dir → build_dir structure.
  */
 export async function build(cwd: string = process.cwd()): Promise<CompileResult> {
     const config = readTlConfig(cwd);
@@ -104,19 +100,14 @@ export async function build(cwd: string = process.cwd()): Promise<CompileResult>
     const files = config.files ?? [];
 
     if (files.length === 0) {
-        return {
-            ok: false,
-            output: '[@tlfx/compiler] No files listed in tlconfig.lua.\n'
-        };
+        return { ok: false, output: '[@tlfx/compiler] No files listed in tlconfig.lua.\n' };
     }
-
-    const outDir = join(cwd, buildDir);
-    mkdirSync(outDir, { recursive: true });
 
     const results = await Promise.all(
         files.map((file) => {
-            const fullPath = join(cwd, sourceDir, file);
-            return compile(fullPath, { outDir });
+            const inFile = join(cwd, sourceDir, file);
+            const outFile = join(cwd, buildDir, file.replace(/\.tl$/, '.lua'));
+            return compile(inFile, { outFile });
         })
     );
 
