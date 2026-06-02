@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve as pathResolve } from 'node:path';
 import { Diagnostic, DiagnosticSeverity, type OutputChannel, Position, Range, Uri } from 'vscode';
 
@@ -9,7 +9,6 @@ export interface CheckOptions {
     workspaceRoot: string | undefined;
     includeDirs: string[];
     globalEnvDef: string | null;
-    tlConfigPath: string | undefined;
     outputChannel: OutputChannel;
 }
 
@@ -43,6 +42,7 @@ function measureToken(sourceLine: string, col: number): number {
     if (ch === '"' || ch === "'") {
         const quote = ch;
         let i = col + 1;
+
         while (i < sourceLine.length) {
             if (sourceLine[i] === '\\') {
                 i += 2;
@@ -52,6 +52,7 @@ function measureToken(sourceLine: string, col: number): number {
                 i++;
             }
         }
+
         return sourceLine.length - col;
     }
 
@@ -143,15 +144,8 @@ function parseTealOutput(output: string): TealDiagnostic[] {
 }
 
 export async function runCheck(options: CheckOptions): Promise<Map<string, Diagnostic[]>> {
-    const {
-        binaryPath,
-        filePath,
-        workspaceRoot,
-        includeDirs,
-        globalEnvDef,
-        tlConfigPath,
-        outputChannel
-    } = options;
+    const { binaryPath, filePath, workspaceRoot, includeDirs, globalEnvDef, outputChannel } =
+        options;
 
     sourceCache.clear();
 
@@ -163,10 +157,6 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
 
     if (globalEnvDef) {
         args.push('--global-env-def', globalEnvDef);
-    }
-
-    if (tlConfigPath && existsSync(tlConfigPath)) {
-        args.push('--config', tlConfigPath);
     }
 
     args.push(filePath);
@@ -216,7 +206,6 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
 
                 const diag = new Diagnostic(range, d.message, d.severity);
                 diag.source = 'teal';
-
                 resultMap.get(uri)?.push(diag);
             }
 

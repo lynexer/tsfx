@@ -43,6 +43,11 @@
                     "default": true,
                     "description": "Run tl check automatically when a .tl file is saved."
                 },
+                "teal-fivem.checkOnType": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run tl check as you type (debounced). Requires saving to disk first to take effect."
+                },
                 "teal-fivem.injectFiveMTypes": {
                     "type": "boolean",
                     "default": true,
@@ -65,12 +70,13 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "pnpm run download-binaries && pnpm run build",
+        "vscode:prepublish": "pnpm run download-binaries && pnpm run download-lsp && pnpm run build",
         "build": "tsup",
         "watch": "tsup --watch",
         "package": "vsce package --no-dependencies",
         "lint": "biome check --write .",
         "download-binaries": "tsx --tsconfig tsconfig.scripts.json scripts/download-binaries.ts",
+        "download-lsp": "tsx --tsconfig tsconfig.scripts.json scripts/download-lsp.ts",
         "gen-natives": "tsx --tsconfig tsconfig.scripts.json scripts/gen-natives.ts"
     },
     "devDependencies": {
@@ -81,11 +87,13 @@
         "@repo/typescript-config": "workspace:*",
         "@types/node": "^22.19.19",
         "@types/vscode": "^1.96.0",
+        "@vscode/vsce": "^3.9.1",
+        "node-fetch": "^3.3.2",
         "tsup": "^8.5.1",
         "tsx": "^4.22.4",
         "typescript": "^5.8.3"
     },
     "dependencies": {
-        "node-fetch": "^3.3.2"
+        "vscode-languageclient": "^9.0.1"
     }
 }

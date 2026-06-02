@@ -4,6 +4,8 @@ packages:
 
 allowBuilds:
   '@swc/core': true
+  '@vscode/vsce-sign': true
   esbuild: true
+  keytar: true
   msw: true
   sharp: true

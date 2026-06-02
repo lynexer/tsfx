@@ -9,13 +9,22 @@ import {
     window,
     workspace
 } from 'vscode';
-import { ensureExecutable, queryBinaryVersion, resolveBinaryPath } from './binaryResolver';
+import {
+    ensureExecutable,
+    queryBinaryVersion,
+    resolveBinaryPath,
+    resolveLspPath
+} from './binaryResolver';
 import { runCheck } from './diagnostics';
-import { getFiveMGlobalEnvDef, resolveIncludeDirs, resolveTlConfig } from './typePathManager';
+import { isLspRunning, startLspClient, stopLspClient } from './lspClient';
+import { getFiveMGlobalEnvDef, resolveIncludeDirs } from './typePathManager';
 
 let diagnosticCollection: DiagnosticCollection;
 let outputChannel: OutputChannel;
 let binaryPath: string;
+
+const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const DEBOUNCE_MS = 500;
 
 export function activate(context: ExtensionContext): void {
     outputChannel = window.createOutputChannel('Teal for FiveM');
@@ -24,7 +33,6 @@ export function activate(context: ExtensionContext): void {
     diagnosticCollection = languages.createDiagnosticCollection('teal');
     context.subscriptions.push(diagnosticCollection);
 
-    // --- Resolve binary ---
     try {
         binaryPath = resolveBinaryPath(context.extensionPath);
         ensureExecutable(binaryPath);
@@ -36,6 +44,28 @@ export function activate(context: ExtensionContext): void {
         window.showErrorMessage(`[Teal for FiveM] ${msg}`);
 
         return;
+    }
+
+    // --- Start LSP (Windows only) ---
+    const config = workspace.getConfiguration('teal-fivem');
+    const injectFiveMTypes = config.get<boolean>('injectFiveMTypes', true);
+    const globalEnvDef = injectFiveMTypes ? getFiveMGlobalEnvDef(context.extensionPath) : null;
+
+    if (injectFiveMTypes && !globalEnvDef) {
+        outputChannel.appendLine(
+            "[@tlfx/vscode] WARNING: fivem.d.tl not found — run 'pnpm gen-natives' to generate FiveM type definitions."
+        );
+    }
+
+    const lspPath = resolveLspPath(context.extensionPath);
+
+    if (lspPath) {
+        outputChannel.appendLine('[@tlfx/vscode] Windows detected — starting LSP.');
+        startLspClient(context, lspPath, outputChannel);
+    } else {
+        outputChannel.appendLine(
+            '[@tlfx/vscode] Linux detected — LSP not available. Using on-save diagnostics.'
+        );
     }
 
     // --- Commands ---
@@ -64,15 +94,48 @@ export function activate(context: ExtensionContext): void {
         })
     );
 
+    context.subscriptions.push(
+        workspace.onDidChangeTextDocument((event) => {
+            if (isLspRunning()) return;
+
+            const doc = event.document;
+            if (doc.languageId !== 'teal') return;
+
+            const cfg = workspace.getConfiguration('teal-fivem');
+            if (!cfg.get<boolean>('checkOnType', true)) return;
+
+            const key = doc.uri.toString();
+            const existing = debounceTimers.get(key);
+            if (existing) clearTimeout(existing);
+
+            debounceTimers.set(
+                key,
+                setTimeout(() => {
+                    debounceTimers.delete(key);
+                    if (!doc.isDirty) {
+                        checkDocument(doc, context.extensionPath);
+                    }
+                }, DEBOUNCE_MS)
+            );
+        })
+    );
+
     // --- Save hook ---
     context.subscriptions.push(
         workspace.onDidSaveTextDocument((doc) => {
             if (doc.languageId !== 'teal') return;
 
-            const config = workspace.getConfiguration('teal-fivem');
-            const checkOnSave = config.get<boolean>('checkOnSave', true);
+            const key = doc.uri.toString();
+            const existing = debounceTimers.get(key);
 
-            if (checkOnSave) {
+            if (existing) {
+                clearTimeout(existing);
+                debounceTimers.delete(key);
+            }
+
+            const cfg = workspace.getConfiguration('teal-fivem');
+
+            if (cfg.get<boolean>('checkOnSave', true)) {
                 checkDocument(doc, context.extensionPath);
             }
         })
@@ -87,6 +150,21 @@ export function activate(context: ExtensionContext): void {
         })
     );
 
+    // --- Close hook ---
+    context.subscriptions.push(
+        workspace.onDidCloseTextDocument((doc) => {
+            const key = doc.uri.toString();
+            const existing = debounceTimers.get(key);
+
+            if (existing) {
+                clearTimeout(existing);
+                debounceTimers.delete(key);
+            }
+
+            diagnosticCollection.delete(doc.uri);
+        })
+    );
+
     for (const doc of workspace.textDocuments) {
         if (doc.languageId === 'teal') {
             checkDocument(doc, context.extensionPath);
@@ -94,7 +172,11 @@ export function activate(context: ExtensionContext): void {
     }
 }
 
-export function deactivate(): void {
+export async function deactivate(): Promise<void> {
+    await stopLspClient();
+    for (const timer of debounceTimers.values()) clearTimeout(timer);
+
+    debounceTimers.clear();
     diagnosticCollection?.clear();
     diagnosticCollection?.dispose();
     outputChannel?.dispose();
@@ -106,21 +188,9 @@ async function checkDocument(doc: TextDocument, extensionPath: string): Promise<
     const config = workspace.getConfiguration('teal-fivem');
     const injectFiveMTypes = config.get<boolean>('injectFiveMTypes', true);
     const extraDirs = config.get<string[]>('extraIncludeDirs', []);
-    const tlConfigSetting = config.get<string>('tlConfigPath', '');
-
     const workspaceRoot = workspace.getWorkspaceFolder(doc.uri)?.uri.fsPath;
-
     const includeDirs = resolveIncludeDirs(extensionPath, injectFiveMTypes, extraDirs);
-
     const globalEnvDef = injectFiveMTypes ? getFiveMGlobalEnvDef(extensionPath) : null;
-
-    if (injectFiveMTypes && !globalEnvDef) {
-        outputChannel.appendLine(
-            `[@tlfx/vscode] WARNING: fivem.d.tl not found — run 'pnpm gen-natives' to generate FiveM type definitions.`
-        );
-    }
-
-    const tlConfigPath = resolveTlConfig(tlConfigSetting, workspaceRoot);
 
     outputChannel.appendLine(`[@tlfx/vscode] Checking: ${doc.uri.fsPath}`);
 
@@ -130,7 +200,6 @@ async function checkDocument(doc: TextDocument, extensionPath: string): Promise<
         workspaceRoot,
         includeDirs,
         globalEnvDef,
-        tlConfigPath,
         outputChannel
     });
 

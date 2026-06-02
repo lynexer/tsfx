@@ -12,7 +12,6 @@ export default defineConfig({
     bundle: true,
     minify: false,
     external: ['vscode'],
-    noExternal: [],
     dts: false,
     clean: true
 });

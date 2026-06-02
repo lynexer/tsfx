@@ -75,3 +75,24 @@ export function queryBinaryVersion(binaryPath: string): string | null {
         return null;
     }
 }
+
+/**
+ * Resolves the path to the bundled teal-language-server .bat on Windows.
+ * Returns null on Linux (no LSP binary available).
+ *
+ * Path: <extensionRoot>/bin/lsp/win32-x64/tls-windows/bin/teal-language-server.bat
+ */
+export function resolveLspPath(extensionRoot: string): string | null {
+    if (process.platform !== 'win32') return null;
+
+    const batPath = join(
+        extensionRoot,
+        'bin',
+        'lsp',
+        'win32-x64',
+        'bin',
+        'teal-language-server.bat'
+    );
+
+    return existsSync(batPath) ? batPath : null;
+}

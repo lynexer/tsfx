@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { join } from 'node:path';
 
 /**
  * Returns the absolute path to the bundled FiveM type definitions directory.
@@ -47,27 +47,4 @@ export function resolveIncludeDirs(
     }
 
     return dirs;
-}
-
-/**
- * Resolves the tlconfig.lua path from settings or falls back to workspace root.
- */
-export function resolveTlConfig(
-    configuredPath: string,
-    workspaceRoot: string | undefined
-): string | undefined {
-    if (configuredPath) {
-        return isAbsolute(configuredPath)
-            ? configuredPath
-            : workspaceRoot
-              ? join(workspaceRoot, configuredPath)
-              : undefined;
-    }
-
-    if (workspaceRoot) {
-        const defaultPath = join(workspaceRoot, 'tlconfig.lua');
-        return existsSync(defaultPath) ? defaultPath : undefined;
-    }
-
-    return undefined;
 }
