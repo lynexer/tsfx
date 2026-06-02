@@ -217,7 +217,7 @@ export async function runCheck(options: CheckOptions): Promise<Map<string, Diagn
                 const diag = new Diagnostic(range, d.message, d.severity);
                 diag.source = 'teal';
 
-                resultMap.get(uri)!.push(diag);
+                resultMap.get(uri)?.push(diag);
             }
 
             resolve(resultMap);
