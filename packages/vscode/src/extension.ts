@@ -17,7 +17,7 @@ import {
 } from './binaryResolver';
 import { runCheck } from './diagnostics';
 import { isLspRunning, startLspClient, stopLspClient } from './lspClient';
-import { getFiveMGlobalEnvDef, resolveIncludeDirs } from './typePathManager';
+import { getFiveMGlobalEnvDef, getFiveMTypesDir } from './typePathManager';
 
 let diagnosticCollection: DiagnosticCollection;
 let outputChannel: OutputChannel;
@@ -46,7 +46,6 @@ export function activate(context: ExtensionContext): void {
         return;
     }
 
-    // --- Start LSP (Windows only) ---
     const config = workspace.getConfiguration('teal-fivem');
     const injectFiveMTypes = config.get<boolean>('injectFiveMTypes', true);
     const globalEnvDef = injectFiveMTypes ? getFiveMGlobalEnvDef(context.extensionPath) : null;
@@ -187,9 +186,8 @@ export async function deactivate(): Promise<void> {
 async function checkDocument(doc: TextDocument, extensionPath: string): Promise<void> {
     const config = workspace.getConfiguration('teal-fivem');
     const injectFiveMTypes = config.get<boolean>('injectFiveMTypes', true);
-    const extraDirs = config.get<string[]>('extraIncludeDirs', []);
     const workspaceRoot = workspace.getWorkspaceFolder(doc.uri)?.uri.fsPath;
-    const includeDirs = resolveIncludeDirs(extensionPath, injectFiveMTypes, extraDirs);
+    const fivemTypesDir = injectFiveMTypes ? getFiveMTypesDir(extensionPath) : null;
     const globalEnvDef = injectFiveMTypes ? getFiveMGlobalEnvDef(extensionPath) : null;
 
     outputChannel.appendLine(`[@tlfx/vscode] Checking: ${doc.uri.fsPath}`);
@@ -197,8 +195,9 @@ async function checkDocument(doc: TextDocument, extensionPath: string): Promise<
     const resultMap = await runCheck({
         binaryPath,
         filePath: doc.uri.fsPath,
+        fileText: doc.getText(),
         workspaceRoot,
-        includeDirs,
+        fivemTypesDir,
         globalEnvDef,
         outputChannel
     });
