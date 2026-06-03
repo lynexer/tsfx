@@ -15,7 +15,7 @@
   </a>
 
   <p align="center">
-    A modern, fully-typed JavaScript/TypeScript wrapper around FiveM natives, built to streamline resource development and supercharge your workflow.
+    NPM packages, NUI component library, and web assets for TSFX — a modern ecosystem for FiveM resource development.
     <br />
     <a href="https://tsfx.dev">
         <strong>Explore the docs »</strong>
@@ -33,24 +33,6 @@
 > [!CAUTION]
 > **This project is under active development and is not yet recommended for production use.** <br />
 > _Breaking changes, incomplete modules, and evolving APIs should be expected._
-
-## Overview
-
-<p>
-  <strong>TSFX</strong> is a modern TypeScript-first wrapper for FiveM natives,  
-  designed for clean, modular resource development and strong typing from the ground up.
-  <br><br>
-  Originally inspired by the outstanding work of 
-  <a href="https://github.com/d0p3t/fivem-js">fivem-js</a>, <a href="https://github.com/Purpose-Dev/fivem-ts">fivem-ts</a>, and <a href="https://github.com/nativewrappers/nativewrappers">nativewrappers</a>, this project builds upon familiar patterns with updated TypeScript support, architectural improvements, and a modern development experience.
-  <br><br>
-  TSFX also draws conceptual influence from the 
-  <a href="https://github.com/citizenfx/fivem/tree/master/code/client/clrcore/External">CitizenFX C# wrapper</a>,
-  particularly in its structured approach to native access and abstraction.
-  <br><br>
-  A sincere thank you to all projects and their contributors! ❤️
-</p>
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## License
 
