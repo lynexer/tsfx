@@ -1,0 +1,17 @@
+{
+    "extends": "@repo/typescript-config/base.json",
+    "compilerOptions": {
+        "outDir": "dist",
+        "rootDir": "src",
+        "types": ["@types/node"],
+        "resolveJsonModule": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "lib": ["ES2022", "DOM"]
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist", ".turbo", "library"]
+}
