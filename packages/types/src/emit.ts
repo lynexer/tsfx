@@ -1,42 +1,100 @@
-import type { LuaClass, LuaField, LuaMethod, LuaParam, SdkModel, TsfxFactory } from './types.js';
+import type {
+    LuaAlias,
+    LuaClass,
+    LuaField,
+    LuaMethod,
+    LuaParam,
+    SdkModel,
+    TsfxField
+} from './types.js';
 
-function docLine(text: string): string {
+function doc(text: string): string {
     return `--- ${text}`;
 }
 
-function annotLine(annotation: string): string {
-    return `--- ${annotation}`;
+function ann(annotation: string): string {
+    return `---@${annotation}`;
 }
 
-/**
- * Formats a type string for LuaLS:
- *  - Strips leading/trailing whitespace
- *  - "self" stays as-is
- */
 function formatType(t: string): string {
     return t.trim() || 'any';
 }
 
+/** Render a param name for a function stub body (strip ? suffix) */
+function stubParam(p: LuaParam): string {
+    return p.optional ? `${p.name}?` : p.name;
+}
+
+interface FunSignature {
+    params: Array<{ name: string; type: string; optional: boolean }>;
+    returnType: string;
+}
+
 /**
- * Builds the param list for a function stub, e.g. `self, source, amount`
- * For colon-style methods `self` is implicit in Lua, but we include it
- * in the stub signature so LuaLS generates correct hover docs.
+ * Parses `fun(source?: number): PlayerHandleClass` into structured form.
+ * Returns null if the type isn't a fun(...) signature (i.e. it's a bare class name).
  */
-function buildParamList(params: LuaParam[]): string {
-    const names = params.map((p) => (p.optional ? `${p.name}?` : p.name));
-    return names.join(', ');
+function parseFunType(typeExpr: string): FunSignature | null {
+    if (!typeExpr.trimStart().startsWith('fun(')) return null;
+
+    const parenOpen = typeExpr.indexOf('(');
+    const parenClose = typeExpr.indexOf(')');
+    if (parenOpen === -1 || parenClose === -1) return null;
+
+    const paramStr = typeExpr.slice(parenOpen + 1, parenClose).trim();
+    const afterParen = typeExpr.slice(parenClose + 1).trim();
+
+    const returnType = afterParen.startsWith(':') ? afterParen.slice(1).trim() : '';
+
+    const params: FunSignature['params'] = [];
+
+    if (paramStr) {
+        for (const part of paramStr.split(',')) {
+            const [rawName, rawType] = part
+                .trim()
+                .split(':')
+                .map((s) => s.trim());
+            if (!rawName) continue;
+
+            const optional = rawName.endsWith('?');
+
+            params.push({
+                name: rawName.replace('?', '').trim(),
+                type: rawType ?? 'any',
+                optional
+            });
+        }
+    }
+
+    return { params, returnType: returnType || 'nil' };
+}
+
+function emitAlias(alias: LuaAlias, lines: string[]): void {
+    lines.push('');
+
+    if (alias.description) lines.push(doc(alias.description));
+
+    for (const g of alias.generics) {
+        lines.push(ann(`generic ${g}`));
+    }
+
+    lines.push(ann(`alias ${alias.name} ${alias.typeExpr}`));
+}
+
+function emitField(field: LuaField): string {
+    const opt = field.optional ? '?' : '';
+    const desc = field.description ? `  ${field.description}` : '';
+
+    return ann(`field ${field.name}${opt} ${formatType(field.type)}${desc}`);
 }
 
 function emitClassDeclaration(cls: LuaClass, lines: string[]): void {
     lines.push('');
-
-    if (cls.description) {
-        lines.push(docLine(cls.description));
-    }
+    if (cls.description) lines.push(doc(cls.description));
 
     const classLine = cls.parent
-        ? `--- @class ${cls.name} : ${cls.parent}`
-        : `--- @class ${cls.name}`;
+        ? ann(`class ${cls.name} : ${cls.parent}`)
+        : ann(`class ${cls.name}`);
 
     lines.push(classLine);
 
@@ -47,117 +105,66 @@ function emitClassDeclaration(cls: LuaClass, lines: string[]): void {
     lines.push(`local ${cls.name} = {}`);
 }
 
-function emitField(field: LuaField): string {
-    const optional = field.optional ? '?' : '';
-    const desc = field.description ? ` ${field.description}` : '';
-
-    return `--- @field ${field.name}${optional} ${formatType(field.type)}${desc}`;
-}
-
 function emitMethod(method: LuaMethod, lines: string[]): void {
     lines.push('');
+    if (method.description) lines.push(doc(method.description));
 
-    if (method.description) {
-        lines.push(docLine(method.description));
+    for (const p of method.params) {
+        const opt = p.optional ? '?' : '';
+        const desc = p.description ? `  ${p.description}` : '';
+
+        lines.push(ann(`param ${p.name}${opt} ${formatType(p.type)}${desc}`));
     }
 
-    for (const param of method.params) {
-        const optional = param.optional ? '?' : '';
-        const desc = param.description ? ` ${param.description}` : '';
+    for (const r of method.returns) {
+        const name = r.name ? ` ${r.name}` : '';
+        const desc = r.description ? `  ${r.description}` : '';
 
-        lines.push(annotLine(`@param ${param.name}${optional} ${formatType(param.type)}${desc}`));
+        lines.push(ann(`return ${formatType(r.type)}${name}${desc}`));
     }
 
-    for (const ret of method.returns) {
-        const name = ret.name ? ` ${ret.name}` : '';
-        const desc = ret.description ? ` ${ret.description}` : '';
-
-        lines.push(annotLine(`@return ${formatType(ret.type)}${name}${desc}`));
-    }
-
-    const paramStr = buildParamList(method.params);
     const sep = method.callStyle === 'colon' ? ':' : '.';
+    const paramStr = method.params.map(stubParam).join(', ');
 
     lines.push(`function ${method.className}${sep}${method.name}(${paramStr}) end`);
 }
 
-function emitTsfxGlobal(factories: TsfxFactory[], lines: string[]): void {
+function emitTsfxGlobal(tsfxFields: TsfxField[], lines: string[]): void {
     lines.push('');
-    lines.push('--- The TSFX Bridge SDK global. All SDK access starts here.');
-    lines.push('--- @class TSFX');
+    lines.push(doc('The TSFX Bridge SDK global. All SDK access starts here.'));
+    lines.push(ann('class TSFXClass'));
 
-    for (const factory of factories) {
-        const returnSig = factory.returns.map((r) => formatType(r.type)).join(', ');
-        const paramSig = factory.params
-            .map((p) => `${p.name}${p.optional ? '?' : ''}: ${formatType(p.type)}`)
-            .join(', ');
-
-        lines.push(`--- @field ${factory.name} fun(${paramSig}): ${returnSig || 'nil'}`);
+    for (const field of tsfxFields) {
+        const desc = field.description ? `  ${field.description}` : '';
+        lines.push(ann(`field ${field.name} ${formatType(field.typeExpr)}${desc}`));
     }
 
-    lines.push('local TSFX = {}');
+    lines.push('local TSFXClass = {}');
 
-    for (const factory of factories) {
-        lines.push('');
+    for (const field of tsfxFields) {
+        const sig = parseFunType(field.typeExpr);
 
-        if (factory.description) {
-            lines.push(docLine(factory.description));
+        if (sig) {
+            lines.push('');
+
+            if (field.description) lines.push(doc(field.description));
+
+            for (const p of sig.params) {
+                const opt = p.optional ? '?' : '';
+                lines.push(ann(`param ${p.name}${opt} ${formatType(p.type)}`));
+            }
+
+            lines.push(ann(`return ${formatType(sig.returnType)}`));
+
+            const paramStr = sig.params.map((p) => (p.optional ? `${p.name}?` : p.name)).join(', ');
+
+            lines.push(`function TSFXClass.${field.name}(${paramStr}) end`);
         }
-
-        for (const param of factory.params) {
-            const optional = param.optional ? '?' : '';
-            const desc = param.description ? ` ${param.description}` : '';
-
-            lines.push(
-                annotLine(`@param ${param.name}${optional} ${formatType(param.type)}${desc}`)
-            );
-        }
-
-        for (const ret of factory.returns) {
-            const name = ret.name ? ` ${ret.name}` : '';
-            const desc = ret.description ? ` ${ret.description}` : '';
-
-            lines.push(annotLine(`@return ${formatType(ret.type)}${name}${desc}`));
-        }
-
-        const paramStr = factory.params.map((p) => (p.optional ? `${p.name}?` : p.name)).join(', ');
-
-        lines.push(`function TSFX.${factory.name}(${paramStr}) end`);
     }
 
     lines.push('');
-    lines.push('--- @type TSFX');
-    lines.push('TSFX = TSFX');
-}
-
-/**
- * When the SDK's tsfx.lua doesn't have explicit @class TSFX / @field entries,
- * we infer factories from Handle-named classes.
- *
- * E.g. class "PlayerHandle" → factory TSFX.Player(source?: number): PlayerHandle
- */
-function buildFallbackFactories(classes: Map<string, LuaClass>): TsfxFactory[] {
-    const factories: TsfxFactory[] = [];
-
-    for (const [name, cls] of classes) {
-        if (!name.endsWith('Handle')) continue;
-
-        const factoryName = name.replace(/Handle$/, '');
-
-        const initMethod = cls.methods.find(
-            (m) => m.name === 'init' || m.name === 'new' || m.name === '__new'
-        );
-
-        factories.push({
-            name: factoryName,
-            params: initMethod ? initMethod.params.filter((p) => p.name !== 'self') : [],
-            returns: [{ type: name, description: `A new ${name} instance.` }],
-            description: cls.description || `Returns a ${name} for the given context.`
-        });
-    }
-
-    factories.sort((a, b) => a.name.localeCompare(b.name));
-    return factories;
+    lines.push(doc('@type TSFXClass'));
+    lines.push('TSFX = TSFXClass');
 }
 
 const FILE_HEADER = `---@meta
@@ -174,34 +181,28 @@ const FILE_HEADER = `---@meta
 export function emitLibrary(model: SdkModel): string {
     const lines: string[] = [FILE_HEADER];
 
+    const sortedAliases = Array.from(model.aliases.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+
+    for (const alias of sortedAliases) {
+        emitAlias(alias, lines);
+    }
+
     const sortedClasses = Array.from(model.classes.values()).sort((a, b) =>
         a.name.localeCompare(b.name)
     );
 
     for (const cls of sortedClasses) {
         emitClassDeclaration(cls, lines);
+        const sortedMethods = cls.methods.slice().sort((a, b) => a.name.localeCompare(b.name));
 
-        for (const method of cls.methods.sort((a, b) => a.name.localeCompare(b.name))) {
+        for (const method of sortedMethods) {
             emitMethod(method, lines);
         }
     }
 
-    const factories =
-        model.tsfxFactories.length > 0
-            ? model.tsfxFactories
-            : buildFallbackFactories(model.classes);
-
-    if (factories.length > 0) {
-        emitTsfxGlobal(factories, lines);
-    } else {
-        lines.push('');
-        lines.push('--- The TSFX Bridge SDK global.');
-        lines.push('--- @class TSFX');
-        lines.push('local TSFX = {}');
-        lines.push('');
-        lines.push('--- @type TSFX');
-        lines.push('TSFX = TSFX');
-    }
+    emitTsfxGlobal(model.tsfxFields, lines);
 
     lines.push('');
     return lines.join('\n');

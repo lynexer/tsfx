@@ -33,13 +33,15 @@ async function main(): Promise<void> {
         console.log();
         console.log(`✓ Generated: library/tsfx.lua`);
         console.log(`  Classes:   ${model.classes.size}`);
-        console.log(`  Factories: ${model.tsfxFactories.length}`);
+        console.log(`  Aliases:   ${model.aliases.size}`);
+        console.log(`  TSFX fields: ${model.tsfxFields.length}`);
         console.log(`  Lines:     ${output.split('\n').length}`);
         console.log(`  Time:      ${elapsed}s`);
         console.log();
     } catch (err) {
         console.error('\n✗ Generation failed:');
         console.error(err);
+
         process.exit(1);
     }
 }

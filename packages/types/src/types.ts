@@ -43,23 +43,37 @@ export interface LuaClass {
     sourceFile: string;
 }
 
-/** A top-level factory method on the TSFX global (e.g. TSFX.Player) */
-export interface TsfxFactory {
+/**
+ * An alias declaration parsed from @alias annotations.
+ * The RHS is kept verbatim so it can be re-emitted as-is.
+ *   e.g.  ---@alias AwaitFn fun(condition: ..., timeout: ...): T?, string?
+ */
+export interface LuaAlias {
     name: string;
-    params: LuaParam[];
-    returns: LuaReturn[];
+    typeExpr: string;
+    generics: string[];
+    description: string;
+    sourceFile: string;
+}
+
+/** A top-level field on the TSFXClass (dot-notation access off the TSFX global) */
+export interface TsfxField {
+    name: string;
+    typeExpr: string;
     description: string;
 }
 
-/** The fully-merged model ready for emission */
+/** The fully-merged, reachability-pruned model ready for emission */
 export interface SdkModel {
     classes: Map<string, LuaClass>;
-    tsfxFactories: TsfxFactory[];
+    aliases: Map<string, LuaAlias>;
+    tsfxFields: TsfxField[];
 }
 
 export interface ParsedFile {
     filePath: string;
     classes: RawClass[];
+    aliases: RawAlias[];
     methods: RawMethod[];
 }
 
@@ -68,6 +82,13 @@ export interface RawClass {
     parent?: string;
     description: string;
     fields: LuaField[];
+}
+
+export interface RawAlias {
+    name: string;
+    typeExpr: string;
+    generics: string[];
+    description: string;
 }
 
 export interface RawMethod {

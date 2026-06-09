@@ -1,23 +1,29 @@
 import type { FetchedFile } from './fetch.js';
-import type { LuaParam, LuaReturn, ParsedFile, RawClass, RawMethod } from './types.js';
+import type { LuaParam, LuaReturn, ParsedFile, RawAlias, RawClass, RawMethod } from './types.js';
 
-/** Matches: --- @class Foo [: Bar]  (with optional leading whitespace) */
+/** ---@class Foo [: Bar] */
 const RE_CLASS = /^---\s*@class\s+([\w.]+)(?:\s*:\s*([\w.]+))?/;
 
-/** Matches: --- @field [modifier] name[?] type [description] */
+/** ---@alias Name <rest> — captures everything after the name as the type expr */
+const RE_ALIAS = /^---\s*@alias\s+([\w]+)\s+(.*)/;
+
+/** ---@generic T [: constraint] — just capture the param name(s) */
+const RE_GENERIC = /^---\s*@generic\s+([\w]+)/;
+
+/** ---@field [modifier] name[?] type [description] */
 const RE_FIELD =
-    /^---\s*@field\s+(?:public\s+|private\s+|protected\s+)?([\w]+)(\?)?(?:\s+([\w|.<>[\]?]+))?(.*)?$/;
+    /^---\s*@field\s+(?:public\s+|private\s+|protected\s+)?([\w]+)(\?)?(?:\s+([\w|.<>[\]?()\s,*:]+?))?(?:\s{2,}(.*))?$/;
 
-/** Matches: --- @param name[?] type [description] */
-const RE_PARAM = /^---\s*@param\s+([\w.]+)(\?)?(?:\s+([\w|.<>[\]?]+))?(.*)?$/;
+/** ---@param name[?] type [description] */
+const RE_PARAM = /^---\s*@param\s+([\w.]+)(\?)?(?:\s+([\w|.<>[\]?()\s,*:]+?))?(?:\s{2,}(.*))?$/;
 
-/** Matches: --- @return type [name] [description] */
-const RE_RETURN = /^---\s*@return\s+([\w|.<>[\]?]+)(?:\s+([\w]+))?(.*)?$/;
+/** ---@return type [name] [description] */
+const RE_RETURN = /^---\s*@return\s+([\w|.<>[\]?()\s,*:]+?)(?:\s+([\w]+))?(?:\s{2,}(.*))?$/;
 
-/** Matches: function ClassName:MethodName(...) or function ClassName.MethodName(...) */
+/** function ClassName:MethodName(...) or function ClassName.MethodName(...) */
 const RE_FUNCTION = /^(?:local\s+)?function\s+([\w]+)([:.])([\w]+)\s*\(/;
 
-/** Matches a plain description comment: --- Some text (not starting with @) */
+/** Plain description: --- text not starting with @ */
 const RE_DESC = /^---\s+(?!@)(.*)/;
 
 function parseType(raw: string | undefined): string {
@@ -30,12 +36,41 @@ function parseDescription(raw: string | undefined): string {
     return raw.trim().replace(/^[-–—]\s*/, '');
 }
 
-/**
- * Parses a single Lua source file and extracts all annotation blocks.
- */
+interface AnnotationBlock {
+    annotations: string[];
+    description: string;
+    lineCount: number;
+}
+
+function collectAnnotationBlock(lines: string[], startIndex: number): AnnotationBlock {
+    const annotations: string[] = [];
+    const descParts: string[] = [];
+    let i = startIndex;
+
+    while (i < lines.length) {
+        const line = lines[i].trim();
+        if (!line.startsWith('---')) break;
+
+        if (/^---\s*@/.test(line)) {
+            annotations.push(line);
+        } else {
+            const dm = line.match(RE_DESC);
+            if (dm) descParts.push(dm[1].trim());
+        }
+        i++;
+    }
+
+    return {
+        annotations,
+        description: descParts.join(' ').trim(),
+        lineCount: i - startIndex
+    };
+}
+
 export function parseFile(file: FetchedFile): ParsedFile {
     const lines = file.content.split('\n');
     const classes: RawClass[] = [];
+    const aliases: RawAlias[] = [];
     const methods: RawMethod[] = [];
 
     let i = 0;
@@ -43,154 +78,132 @@ export function parseFile(file: FetchedFile): ParsedFile {
     while (i < lines.length) {
         const line = lines[i].trim();
 
-        if (line.startsWith('---')) {
-            const block = collectAnnotationBlock(lines, i);
-            i += block.lines.length;
+        if (!line.startsWith('---')) {
+            i++;
+            continue;
+        }
 
-            const nextLine = lines[i]?.trim() ?? '';
+        const block = collectAnnotationBlock(lines, i);
+        i += block.lineCount;
 
-            const classMatch = block.annotations.find((a) => RE_CLASS.test(a));
+        const nextLine = lines[i]?.trim() ?? '';
+        const generics: string[] = [];
 
-            if (classMatch) {
-                const m = RE_CLASS.exec(classMatch);
-                if (!m) continue;
+        for (const ann of block.annotations) {
+            const gm = ann.match(RE_GENERIC);
+            if (gm) generics.push(gm[1]);
+        }
 
-                const cls: RawClass = {
+        const aliasAnn = block.annotations.find((a) => RE_ALIAS.test(a));
+
+        if (aliasAnn) {
+            const m = RE_ALIAS.exec(aliasAnn);
+
+            if (m) {
+                aliases.push({
                     name: m[1],
-                    parent: m[2],
-                    description: block.description,
-                    fields: []
-                };
-
-                for (const annotation of block.annotations) {
-                    const fm = annotation.match(RE_FIELD);
-
-                    if (fm) {
-                        cls.fields.push({
-                            name: fm[1],
-                            type: parseType(fm[3]),
-                            optional: fm[2] === '?',
-                            description: parseDescription(fm[4])
-                        });
-                    }
-                }
-
-                classes.push(cls);
-                continue;
-            }
-
-            const funcMatch = nextLine.match(RE_FUNCTION);
-
-            if (funcMatch) {
-                const className = funcMatch[1];
-                const separator = funcMatch[2] as ':' | '.';
-                const methodName = funcMatch[3];
-                const params: LuaParam[] = [];
-                const returns: LuaReturn[] = [];
-
-                for (const annotation of block.annotations) {
-                    const pm = annotation.match(RE_PARAM);
-                    if (pm) {
-                        params.push({
-                            name: pm[1],
-                            optional: pm[2] === '?',
-                            type: parseType(pm[3]),
-                            description: parseDescription(pm[4])
-                        });
-                    }
-
-                    const rm = annotation.match(RE_RETURN);
-                    if (rm) {
-                        returns.push({
-                            type: parseType(rm[1]),
-                            name: rm[2],
-                            description: parseDescription(rm[3])
-                        });
-                    }
-                }
-
-                methods.push({
-                    className,
-                    name: methodName,
-                    callStyle: separator === ':' ? 'colon' : 'dot',
-                    params,
-                    returns,
+                    typeExpr: m[2].trim(),
+                    generics,
                     description: block.description
                 });
-
-                i++;
-                continue;
             }
 
             continue;
         }
 
-        i++;
-    }
+        const classAnn = block.annotations.find((a) => RE_CLASS.test(a));
 
-    return {
-        filePath: file.path,
-        classes,
-        methods
-    };
-}
+        if (classAnn) {
+            const m = RE_CLASS.exec(classAnn);
+            if (!m) continue;
 
-interface AnnotationBlock {
-    annotations: string[];
-    description: string;
-    lines: string[];
-}
+            const cls: RawClass = {
+                name: m[1],
+                parent: m[2],
+                description: block.description,
+                fields: []
+            };
 
-/**
- * Starting at line `startIndex`, collects contiguous `---` lines into a
- * single annotation block. Returns when a non-`---` line is hit.
- */
-function collectAnnotationBlock(lines: string[], startIndex: number): AnnotationBlock {
-    const annotations: string[] = [];
-    const descParts: string[] = [];
-    const consumed: string[] = [];
+            for (const ann of block.annotations) {
+                const fm = ann.match(RE_FIELD);
 
-    let i = startIndex;
-    while (i < lines.length) {
-        const line = lines[i].trim();
-        if (!line.startsWith('---')) break;
+                if (fm) {
+                    cls.fields.push({
+                        name: fm[1],
+                        type: parseType(fm[3]),
+                        optional: fm[2] === '?',
+                        description: parseDescription(fm[4])
+                    });
+                }
+            }
 
-        consumed.push(lines[i]);
-
-        const descMatch = line.match(RE_DESC);
-
-        if (descMatch) {
-            descParts.push(descMatch[1].trim());
-        } else if (/^---\s*@/.test(line)) {
-            annotations.push(line);
+            classes.push(cls);
+            continue;
         }
 
-        i++;
+        const funcMatch = nextLine.match(RE_FUNCTION);
+
+        if (funcMatch) {
+            const className = funcMatch[1];
+            const separator = funcMatch[2] as ':' | '.';
+            const methodName = funcMatch[3];
+            const params: LuaParam[] = [];
+            const returns: LuaReturn[] = [];
+
+            for (const ann of block.annotations) {
+                const pm = ann.match(RE_PARAM);
+
+                if (pm) {
+                    params.push({
+                        name: pm[1],
+                        optional: pm[2] === '?',
+                        type: parseType(pm[3]),
+                        description: parseDescription(pm[4])
+                    });
+                }
+
+                const rm = ann.match(RE_RETURN);
+
+                if (rm) {
+                    returns.push({
+                        type: parseType(rm[1]),
+                        name: rm[2],
+                        description: parseDescription(rm[3])
+                    });
+                }
+            }
+
+            methods.push({
+                className,
+                name: methodName,
+                callStyle: separator === ':' ? 'colon' : 'dot',
+                params,
+                returns,
+                description: block.description
+            });
+
+            i++;
+        }
     }
 
-    return {
-        annotations,
-        description: descParts.join(' ').trim(),
-        lines: consumed
-    };
+    return { filePath: file.path, classes, aliases, methods };
 }
 
 export function parseAllFiles(files: FetchedFile[]): ParsedFile[] {
     console.log(`[parse] Parsing ${files.length} Lua files...`);
 
-    const parsed = files.map((f) => {
+    return files.map((f) => {
         const result = parseFile(f);
-        const classCount = result.classes.length;
-        const methodCount = result.methods.length;
+        const cc = result.classes.length;
+        const ac = result.aliases.length;
+        const mc = result.methods.length;
 
-        if (classCount > 0 || methodCount > 0) {
+        if (cc > 0 || ac > 0 || mc > 0) {
             console.log(
-                `  ${f.path.split('/').slice(-2).join('/')} → ${classCount} class(es), ${methodCount} method(s)`
+                `  ${f.path.split('/').slice(-2).join('/')} → ${cc} class(es), ${ac} alias(es), ${mc} method(s)`
             );
         }
 
         return result;
     });
-
-    return parsed;
 }
