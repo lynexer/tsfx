@@ -1014,3 +1014,15 @@ function TSFXClass.Tick(interval, fn) end
 
 ---@type TSFXClass
 TSFX = TSFXClass
+
+-- ============================================================================
+-- Injections (src/injections.lua)
+-- ============================================================================
+
+---Check if running in server context
+---@return boolean true if running on server
+function TSFXClass.isServer() end
+
+---Check if running in client context
+---@return boolean true if running on client
+function TSFXClass.isClient() end

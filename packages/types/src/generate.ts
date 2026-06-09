@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { emitLibrary } from './emit.js';
@@ -11,6 +11,7 @@ const __dirname = dirname(__filename);
 
 const LIBRARY_DIR = join(__dirname, '..', 'library');
 const OUTPUT_FILE = join(LIBRARY_DIR, 'tsfx.lua');
+const INJECTIONS_FILE = join(__dirname, 'injections.lua');
 
 async function main(): Promise<void> {
     const startTime = Date.now();
@@ -23,7 +24,20 @@ async function main(): Promise<void> {
         const files = await fetchSdkFiles();
         const parsed = parseAllFiles(files);
         const model = mergeModel(parsed);
-        const output = emitLibrary(model);
+        const generated = emitLibrary(model);
+        const injectionRaw = await readFile(INJECTIONS_FILE, 'utf-8');
+        const injectionLines = injectionRaw.split('\n');
+
+        const lastHeaderLine = injectionLines.reduceRight(
+            (found, line, i) => (found === -1 && line.startsWith('-- ===') ? i : found),
+            -1
+        );
+
+        const injections = injectionLines
+            .slice(lastHeaderLine + 1)
+            .join('\n')
+            .trimStart();
+        const output = `${generated}\n-- ============================================================================\n-- Injections (src/injections.lua)\n-- ============================================================================\n\n${injections}`;
 
         await mkdir(LIBRARY_DIR, { recursive: true });
         await writeFile(OUTPUT_FILE, output, 'utf-8');
