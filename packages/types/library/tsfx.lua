@@ -9,12 +9,61 @@
 -- ============================================================================
 
 
----@alias AnimationFlags number
+---@alias AnimationFlags
+---| number
+---| 0 DEFAULT
+---| 1 LOOPING
+---| 2 HOLD_LAST_FRAME
+---| 4 REPOSITION_WHEN_FINISHED
+---| 8 NOT_INTERRUPTABLE
+---| 16 UPPERBODY
+---| 32 SECONDARY
+---| 64 REORIENT_WHEN_FINISHED
+---| 128 ABORT_ON_PED_MOVEMENT
+---| 256 ADDITIVE
+---| 512 TURN_OFF_COLLISION
+---| 1024 OVERRIDE_PHYSICS
+---| 2048 IGNORE_GRAVITY
+---| 4096 EXTRACT_INITIAL_OFFSET
+---| 8192 EXIT_AFTER_INTERRUPTED
+---| 16384 TAG_SYNC_IN
+---| 32768 TAG_SYNC_OUT
+---| 65536 TAG_SYNC_CONTINUOUS
+---| 131072 FORCE_START
+---| 262144 USE_KINEMATIC_PHYSICS
+---| 524288 USE_MOVER_EXTRACTION
+---| 1048576 HIDE_WEAPON
+---| 2097152 ENDS_IN_DEAD_POSE
+---| 4194304 ACTIVATE_RAGDOLL_ON_COLLISION
+---| 8388608 DONT_EXIT_ON_DEATH
+---| 16777216 ABORT_ON_WEAPON_DAMAGE
+---| 33554432 DISABLE_FORCED_PHYSICS_UPDATE
+---| 67108864 PROCESS_ATTACHMENTS_ON_START
+---| 134217728 EXPAND_PED_CAPSULE_FROM_SKELETON
+---| 268435456 USE_ALTERNATIVE_FP_ANIM
+---| 536870912 BLENDOUT_WRT_LAST_FRAME
+---| 1073741824 USE_FULL_BLENDING
 
 ---@generic T
 ---@alias AwaitFn fun(condition: (T | fun(): T?), timeout: (number | false | nil)): T?, string?
 
----@alias ControlFlags number
+---@alias ControlFlags
+---| number
+---| 0 NONE
+---| 1 DISABLE_LEG_IK
+---| 2 DISABLE_ARM_IK
+---| 4 DISABLE_HEAD_IK
+---| 8 DISABLE_TORSO_IK
+---| 16 DISABLE_TORSO_REACT_IK
+---| 32 USE_LEG_ALLOW_TAGS
+---| 64 USE_LEG_BLOCK_TAGS
+---| 128 USE_ARM_ALLOW_TAGS
+---| 256 USE_ARM_BLOCK_TAGS
+---| 512 PROCESS_WEAPON_HAND_GRIP
+---| 1024 USE_FP_ARM_LEFT
+---| 2048 USE_FP_ARM_RIGHT
+---| 4096 DISABLE_TORSO_VEHICLE_IK
+---| 8192 LINKED_FACIAL
 
 ---@alias LogLevel 'debug' | 'info' | 'warn' | 'error'
 
@@ -24,6 +73,25 @@
 
 ---@generic T
 ---@alias TryFn fun(fn: fun(): T?): TryResult
+
+---@alias VersionConstraint string A version string with an optional operator prefix: ">=", ">", "<=", "<", "~=", or none (treated as ">="
+
+---@alias WeaponComponentFlags
+---| 0  WEAPON_COMPONENT_NONE
+---| 1  WEAPON_COMPONENT_FLASH
+---| 2  WEAPON_COMPONENT_SCOPE
+---| 4  WEAPON_COMPONENT_SUPP
+---| 8  WEAPON_COMPONENT_SCLIP2
+---| 16 WEAPON_COMPONENT_GRIP
+
+---@alias WeaponResourceFlags
+---| 1  WRF_REQUEST_BASE_ANIMS
+---| 2  WRF_REQUEST_COVER_ANIMS
+---| 4  WRF_REQUEST_MELEE_ANIMS
+---| 8  WRF_REQUEST_MOTION_ANIMS
+---| 16 WRF_REQUEST_STEALTH_ANIMS
+---| 32 WRF_REQUEST_ALL_MOVEMENT_VARIATION_ANIMS
+---| 31 WRF_REQUEST_ALL_ANIMS
 
 ---@class AnimationOptions
 ---@field blendIn? number Defaults to 8.0
@@ -44,6 +112,27 @@ local AnimationOptions = {}
 ---@class CacheClass
 local CacheClass = {}
 
+---@param key string The cache key
+---@return nil
+function CacheClass.delete(key) end
+
+---@return nil
+function CacheClass.flush() end
+
+---@param key string The cache key
+---@return any value The stored value, or nil if missing/expired
+function CacheClass.get(key) end
+
+---@param key string The cache key
+---@return boolean exists True if key exists and is not expired
+function CacheClass.has(key) end
+
+---@param key string The cache key
+---@param value any The value to store
+---@param ttl? number Optional TTL in seconds
+---@return nil
+function CacheClass.set(key, value, ttl) end
+
 ---@class EventBusClass
 ---@field _listeners table<string, {callback: function, resource: string?}[]> Event listeners by event name
 ---@field _rateLimits table<string, EventBusRateLimit> Rate limit configs by event
@@ -54,6 +143,53 @@ local CacheClass = {}
 ---@field _secret? string Server-side session secret
 ---@field _sessionTokens table<number, table<string, {token: string, issuedAt: number}>> Server-side tokens by player and resource
 local EventBusClass = {}
+
+---@param event string Event name
+---@param ... any target (server), payload, callback
+---@return EventBusClass  The handle for chaining.
+function EventBusClass.await(event, ...) end
+
+---@param event string Event name
+---@param payload table Event payload
+---@return EventBusClass  The handle for chaining.
+function EventBusClass.broadcast(event, payload) end
+
+---@param event string Event name
+---@param ... any Arguments to pass to listeners
+---@return any|nil Result from last listener if any returned non-nil
+function EventBusClass.emit(event, ...) end
+
+---@param event string Event name
+---@param ... any target (server only) and payload
+---@return EventBusClass  The handle for chaining.
+function EventBusClass.emitNet(event, ...) end
+
+---@return boolean
+function EventBusClass.hasSessionToken() end
+
+---@param rawEvent string The external event name to intercept
+---@param internalEvent string The internal event name to re-emit as
+---@param adapter? fun(...): table | nil Normalizes raw args into a payload, or returns nil to drop
+---@return EventBusClass  The handle for chaining.
+function EventBusClass.intercept(rawEvent, internalEvent, adapter) end
+
+---@param event string Event name
+---@param callback function The callback to remove (must be same reference)
+---@param resourceName? string Consuming resource name (nil for internal listeners)
+---@return EventBusClass  The handle for chaining.
+function EventBusClass.off(event, callback, resourceName) end
+
+---@param event string Event name
+---@param callback function Callback function
+---@param resourceName? string Consuming resource name (nil for internal listeners)
+---@return EventBusClass  The handle for chaining.
+function EventBusClass.on(event, callback, resourceName) end
+
+---@param event string Event name
+---@param maxCalls? number Max calls allowed in window (for rate limiting)
+---@param windowMs? number Time window in milliseconds (for rate limiting)
+---@return EventBusClass  The handle for chaining.
+function EventBusClass.register(event, maxCalls, windowMs) end
 
 ---@class EventBusRateLimit
 ---@field maxCalls number Maximum calls allowed in window
@@ -164,6 +300,20 @@ local JobDefinition = {}
 ---@class LocaleClass
 local LocaleClass = {}
 
+---@param key string The locale key
+---@param params table|nil Named placeholders
+---@return string|any, table|nil
+function LocaleClass.get(key, params) end
+
+---@return string|nil
+function LocaleClass.getLanguage() end
+
+---@return string|nil
+function LocaleClass.getLanguageGTA() end
+
+---@return nil
+function LocaleClass.reload() end
+
 ---@class LogEvent
 ---@field level LogLevel
 ---@field message string
@@ -179,6 +329,66 @@ local LogEvent = {}
 ---@field _hooks fun(event: LogEvent)[]
 local LogInstance = {}
 
+---@param level LogLevel
+---@param message string
+---@param data table|nil
+---@return LogInstance  The handle for chaining.
+function LogInstance:_dispatch(level, message, data) end
+
+---@param level LogLevel
+---@return boolean
+function LogInstance:_levelMeetsThreshold(level) end
+
+---@param level LogLevel
+---@param message string
+---@param data string|nil
+---@return LogInstance  The handle for chaining.
+function LogInstance:_printToConsole(level, message, data) end
+
+---@param data table|nil
+---@return string|nil
+function LogInstance:_serializeData(data) end
+
+---@param fn fun(event: LogEvent)
+---@return LogInstance  The handle for chaining.
+function LogInstance:addHook(fn) end
+
+---@return nil
+function LogInstance:clearHooks() end
+
+---@param message string
+---@param data table|nil
+---@return LogInstance  The handle for chaining.
+function LogInstance:debug(message, data) end
+
+---@param message string
+---@param data table|nil
+---@return LogInstance  The handle for chaining.
+function LogInstance:error(message, data) end
+
+---@param message string
+---@param data table|nil
+---@return LogInstance  The handle for chaining.
+function LogInstance:info(message, data) end
+
+---@param resourceName string The resource name
+---@param prefix string The prefix for output
+---@return LogInstance
+function LogInstance.new(resourceName, prefix) end
+
+---@param fn fun(event: LogEvent)
+---@return LogInstance  The handle for chaining.
+function LogInstance:removeHook(fn) end
+
+---@param level LogLevel
+---@return nil
+function LogInstance:setLevel(level) end
+
+---@param message string
+---@param data table|nil
+---@return LogInstance  The handle for chaining.
+function LogInstance:warn(message, data) end
+
 ---@class LoopHandle
 ---@field stop fun() Stops the loop on the next iteration.
 ---@field isRunning fun(): boolean Returns wether the loop is currently active
@@ -186,6 +396,12 @@ local LoopHandle = {}
 
 ---@class NotifyHandleClass
 local NotifyHandleClass = {}
+
+---@class ParsedVersion
+---@field major integer
+---@field minor integer
+---@field patch integer
+local ParsedVersion = {}
 
 ---@class PlayerHandleClass : FacadeClass
 local PlayerHandleClass = {}
@@ -413,6 +629,47 @@ local StateBagSyncConfig = {}
 ---@field _syncs StateBagSyncConfig[]
 local StateMachineClass = {}
 
+---@param state string
+---@return StateMachineClass  The handle for chaining.
+function StateMachineClass:_syncBags(state) end
+
+---@param data table
+---@return StateMachineClass  The handle for chaining.
+function StateMachineClass:addContext(data) end
+
+---@param to string
+---@return boolean
+function StateMachineClass:can(to) end
+
+---@return table
+function StateMachineClass:getContext() end
+
+---@return string
+function StateMachineClass:getState() end
+
+---@param state string
+---@return boolean
+function StateMachineClass:is(state) end
+
+---@param options StateMachineOptions
+---@param context? table
+---@param skipInitialSync? boolean
+---@return StateMachineClass
+function StateMachineClass.new(options, context, skipInitialSync) end
+
+---@param key string
+---@return any
+function StateMachineClass:readBag(key) end
+
+---@return StateMachineClass  The handle for chaining.
+function StateMachineClass:resync() end
+
+---@param to string
+---@param context? table
+---@return boolean
+---@return string?
+function StateMachineClass:transition(to, context) end
+
 ---@class StateMachineOptions
 ---@field initial string
 ---@field transitions StateMachineTransition[]
@@ -433,11 +690,215 @@ local StateMachineTransition = {}
 ---@class StreamingClass
 local StreamingClass = {}
 
+---@param audioBank string
+---@param timeout? number
+---@return StreamingHandle
+function StreamingClass.requestAudioBank(audioBank, timeout) end
+
+---@param weaponType string | number
+---@param timeout? number
+---@param resourceFlags? WeaponResourceFlags Defaults to 31 (all anims)
+---@param componentFlags? WeaponComponentFlags Defaults to 0 (none)
+---@return StreamingHandle
+function StreamingClass.requestWeaponAsset(weaponType, timeout, resourceFlags, componentFlags) end
+
+---@param audioBank string
+---@param fn fun(audioBank: string)
+---@param timeout? number
+---@return StreamingClass  The handle for chaining.
+function StreamingClass.withAudioBank(audioBank, fn, timeout) end
+
+---@param weaponType string | number
+---@param fn fun(weaponType: number)
+---@param timeout? number
+---@param resourceFlags? WeaponResourceFlags
+---@param componentFlags? WeaponComponentFlags
+---@return StreamingClass  The handle for chaining.
+function StreamingClass.withWeaponAsset(weaponType, fn, timeout, resourceFlags, componentFlags) end
+
+---@class StreamingHandle
+---@field asset number | string The loaded asset value (hash or string depending on type)
+---@field release fun() Releases the asset back to the game
+---@field isValid fun(): boolean Returns whether the asset is currently loaded in memory
+local StreamingHandle = {}
+
 ---@class StringClass
 local StringClass = {}
 
+---@param str string
+---@return string
+function StringClass.capitalize(str) end
+
+---@param str string
+---@param pat string
+---@param plain? boolean If true, treats pat a plain text
+---@return integer
+function StringClass.count(str, pat, plain) end
+
+---@param str string
+---@param suffix string
+---@return boolean
+function StringClass.endsWith(str, suffix) end
+
+---@param str string
+---@param substr string
+---@return boolean
+function StringClass.includes(str, substr) end
+
+---@param str string
+---@param length integer Target minimum length
+---@param char? string Padding character (default: space)
+---@return string
+function StringClass.padEnd(str, length, char) end
+
+---@param str string
+---@param length integer Target minimum length
+---@param char? string Padding character (default: space)
+---@return string
+function StringClass.padStart(str, length, char) end
+
+---@param pattern string The format pattern. Use {token} or {token:count} syntax.
+---@param charset? string Custom character pool used by the {x} token.
+---@return string
+function StringClass.random(pattern, charset) end
+
+---@param str string
+---@param target string Plain-text substring to find
+---@param replace string Replacement string
+---@return string, integer count
+function StringClass.replaceAll(str, target, replace) end
+
+---@param str string The string to split
+---@param sep string Separator pattern (or plain string if plain=true)
+---@param limit? integer Maximum number of splits; the remainder is kept in the last element
+---@param plain? boolean If true, treats sep as a plain string instead of a Lua pattern
+---@return string[]
+function StringClass.split(str, sep, limit, plain) end
+
+---@param str string
+---@param prefix string
+---@return boolean
+function StringClass.startsWith(str, prefix) end
+
+---@param str string
+---@return string
+function StringClass.toCamelCase(str) end
+
+---@param str string
+---@return string
+function StringClass.toSnakeCase(str) end
+
+---@param str string
+---@return string
+function StringClass.toTitleCase(str) end
+
+---@param str string
+---@return string
+function StringClass.trim(str) end
+
+---@param str string
+---@return string
+function StringClass.trimEnd(str) end
+
+---@param str string
+---@return string
+function StringClass.trimStart(str) end
+
+---@param str string
+---@param maxLen integer
+---@param ellipsis? string Defaults to '...'
+---@return string
+function StringClass.truncate(str, maxLen, ellipsis) end
+
+---@return string
+function StringClass.uuid() end
+
 ---@class TableClass
 local TableClass = {}
+
+---@param t table
+---@param value any
+---@return boolean
+function TableClass.contains(t, value) end
+
+---@param t table
+---@return integer
+function TableClass.count(t) end
+
+---@param t table
+---@return table
+function TableClass.deepCopy(t) end
+
+---@param t table
+---@param fn fun(v: any, k: any): boolean
+---@return boolean
+function TableClass.every(t, fn) end
+
+---@param t table
+---@param fn fun(v: any, k: any): boolean
+---@return table
+function TableClass.filter(t, fn) end
+
+---@param t table
+---@param fn fun(v: any, k: any): boolean
+---@return any value, any key
+function TableClass.find(t, fn) end
+
+---@param t table
+---@param depth? integer Maximum depth to flatten (default: 1)
+---@return table
+function TableClass.flatten(t, depth) end
+
+---@param t table
+---@param fn fun(v: any, k: any): any Returns the group key for each value
+---@return table<any, table>
+function TableClass.groupBy(t, fn) end
+
+---@param t table
+---@return boolean
+function TableClass.isEmpty(t) end
+
+---@param t table
+---@return any[]
+function TableClass.keys(t) end
+
+---@param t table
+---@param fn fun(v: any, k: any): any
+---@return table
+function TableClass.map(t, fn) end
+
+---@param ... table
+---@return table
+function TableClass.merge(...) end
+
+---@param t table
+---@param fn fun(acc: any, v: any, k: any): any
+---@param initial any Starting value for the accumulator
+---@return any
+function TableClass.reduce(t, fn, initial) end
+
+---@param t table
+---@return table
+function TableClass.reverse(t) end
+
+---@param t table
+---@param from integer Start index (inclusive)
+---@param to? integer End index (inclusive, default: last element)
+---@return table
+function TableClass.slice(t, from, to) end
+
+---@param t table
+---@param fn fun(v: any, k: any): boolean
+---@return boolean
+function TableClass.some(t, fn) end
+
+---@param t table
+---@return table
+function TableClass.unique(t) end
+
+---@param t table
+---@return any[]
+function TableClass.values(t) end
 
 ---@class TryResult
 ---@field catch fun(self: TryResult, handler: fun(err: string)): TryResult
@@ -447,6 +908,72 @@ local TryResult = {}
 ---@class VersionClass
 ---@field _sharedRepoUrl string
 local VersionClass = {}
+
+---@param deps table<string, string> Map of { [resourceName] = minVersion }
+---@return boolean allPassed, table<string, string> failures
+function VersionClass.assertDependencies(deps) end
+
+---@param resourceName string
+---@param minVersion string
+---@param silent? boolean If true, suppresses _TSFX.Log:error (used when the caller handles reporting)
+---@return boolean ok, string message
+function VersionClass.assertDependency(resourceName, minVersion, silent) end
+
+---@param resourceName string
+---@param currentVersion string
+---@param callback? fun(isUpToDate: boolean, current: string, lastest: string)
+---@return VersionClass  The handle for chaining.
+function VersionClass.checkRelease(resourceName, currentVersion, callback) end
+
+---@param rawUrl string
+---@param resourceName string
+---@param currentVersion string
+---@param callback? fun(isUpToDate: boolean, current: string, latest: string)
+---@return VersionClass  The handle for chaining.
+function VersionClass.checkStandalone(rawUrl, resourceName, currentVersion, callback) end
+
+---@param versionA string
+---@param versionB string
+---@return -1 | 0 | 1
+function VersionClass.compare(versionA, versionB) end
+
+---@param parsed ParsedVersion
+---@return string
+function VersionClass.format(parsed) end
+
+---@param resourceName string
+---@return string?
+function VersionClass.getInstalled(resourceName) end
+
+---@param current string
+---@param minimum string
+---@return boolean
+function VersionClass.isAtLeast(current, minimum) end
+
+---@param versionStr string
+---@return ParsedVersion?
+function VersionClass.parse(versionStr) end
+
+---@param config VersionRunConfig
+---@return VersionClass  The handle for chaining.
+function VersionClass.run(config) end
+
+---@param current string
+---@param constraint VersionConstraint
+---@return boolean
+function VersionClass.satisfies(current, constraint) end
+
+---@param url string Raw base URL to the shared versions repository
+---@return VersionClass  The handle for chaining.
+function VersionClass.setSharedRepo(url) end
+
+---@class VersionRunConfig
+---@field resource? string Resource name. Defaults to GetCurrentResourceName()
+---@field version? string Installed version. Defaults to TSFX.Version.getInstalled(resource)
+---@field github? string "owner/repo" shorthand for standalone GitHub repos. Mutually exclusive with `shared`
+---@field shared? boolean Use the configured shared versions repo. Mutually exclusive with `github`
+---@field deps? table<string, VersionConstraint> Map of { [resourceName] = constraint } e.g. { tsfx_sdk = ">=3.27.0" }
+local VersionRunConfig = {}
 
 --- The TSFX Bridge SDK global. All SDK access starts here.
 ---@class TSFXClass
