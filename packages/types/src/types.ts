@@ -30,6 +30,7 @@ export interface LuaMethod {
     returns: LuaReturn[];
     description: string;
     chainable: boolean;
+    generics: string[];
     sourceFile: string;
 }
 
@@ -98,4 +99,5 @@ export interface RawMethod {
     params: LuaParam[];
     returns: LuaReturn[];
     description: string;
+    generics: string[];
 }

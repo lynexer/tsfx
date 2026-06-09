@@ -73,6 +73,7 @@ function splitTopLevelParams(paramStr: string): string[] {
             current = '';
             continue;
         }
+
         current += ch;
     }
 
@@ -151,6 +152,10 @@ function emitMethod(method: LuaMethod, lines: string[]): void {
     lines.push('');
     if (method.description) lines.push(doc(method.description));
 
+    for (const g of method.generics) {
+        lines.push(ann(`generic ${g}`));
+    }
+
     for (const p of method.params) {
         const desc = p.description ? `  ${p.description}` : '';
 
@@ -197,6 +202,7 @@ function emitTsfxGlobal(tsfxFields: TsfxField[], lines: string[]): void {
         lines.push(ann(`return ${formatType(sig.returnType)}`));
 
         const paramStr = sig.params.map((p) => p.name).join(', ');
+
         lines.push(`function TSFXClass.${field.name}(${paramStr}) end`);
     }
 

@@ -100,6 +100,7 @@ export function parseFile(file: FetchedFile): ParsedFile {
             }
 
             const cm = annotation.match(RE_CLASS);
+
             if (cm) {
                 const cls: RawClass = {
                     name: cm[1],
@@ -116,6 +117,7 @@ export function parseFile(file: FetchedFile): ParsedFile {
             }
 
             const fm = annotation.match(RE_FIELD);
+
             if (fm && classes.length > 0) {
                 const target = classes[classes.length - 1];
 
@@ -137,8 +139,16 @@ export function parseFile(file: FetchedFile): ParsedFile {
 
             const params: LuaParam[] = [];
             const returns: LuaReturn[] = [];
+            const generics: string[] = [];
 
             for (const annotation of block.annotations) {
+                const gm = annotation.match(RE_GENERIC);
+
+                if (gm) {
+                    generics.push(gm[1]);
+                    continue;
+                }
+
                 const pm = annotation.match(RE_PARAM);
 
                 if (pm) {
@@ -168,6 +178,7 @@ export function parseFile(file: FetchedFile): ParsedFile {
                 callStyle: separator === ':' ? 'colon' : 'dot',
                 params,
                 returns,
+                generics,
                 description: block.description
             });
 

@@ -2,6 +2,7 @@ import type {
     LuaAlias,
     LuaClass,
     LuaMethod,
+    LuaParam,
     LuaReturn,
     ParsedFile,
     RawMethod,
@@ -21,6 +22,26 @@ function isTypeFile(path: string): boolean {
 function isFacadeFile(path: string): boolean {
     const filename = path.split('/').pop() ?? '';
     return filename.includes('facade') && filename.endsWith('.lua');
+}
+
+/** Conventional single-char generic names used in LuaCATS */
+const GENERIC_VARS = new Set(['T', 'K', 'V', 'U', 'R', 'E', 'S', 'A', 'B']);
+
+function inferGenerics(explicit: string[], params: LuaParam[], returns: LuaReturn[]): string[] {
+    const result = new Set(explicit);
+    const allTypeExprs = [...params.map((p) => p.type), ...returns.map((r) => r.type)];
+
+    for (const expr of allTypeExprs) {
+        const re = /\b([A-Z])\b/g;
+        let m = re.exec(expr);
+
+        while (m !== null) {
+            if (GENERIC_VARS.has(m[1])) result.add(m[1]);
+            m = re.exec(expr);
+        }
+    }
+
+    return [...result];
 }
 
 function detectChainable(method: RawMethod, className: string): boolean {
@@ -53,10 +74,12 @@ function extractTypeNames(typeExpr: string): string[] {
     const found: string[] = [];
     const re = /\b([A-Z][A-Za-z0-9_]*)\b/g;
     let m = re.exec(typeExpr);
+
     while (m !== null) {
         if (!LUA_PRIMITIVES.has(m[1])) found.push(m[1]);
         m = re.exec(typeExpr);
     }
+
     return found;
 }
 
@@ -212,6 +235,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
                 returns: finalReturns,
                 description: rawMethod.description,
                 chainable,
+                generics: inferGenerics(rawMethod.generics, rawMethod.params, finalReturns),
                 sourceFile: file.filePath
             };
 
