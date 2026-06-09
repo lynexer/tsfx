@@ -19,11 +19,6 @@ function isTypeFile(path: string): boolean {
     return false;
 }
 
-function isFacadeFile(path: string): boolean {
-    const filename = path.split('/').pop() ?? '';
-    return filename.includes('facade') && filename.endsWith('.lua');
-}
-
 /** Conventional single-char generic names used in LuaCATS */
 const GENERIC_VARS = new Set(['T', 'K', 'V', 'U', 'R', 'E', 'S', 'A', 'B']);
 
@@ -46,6 +41,7 @@ function inferGenerics(explicit: string[], params: LuaParam[], returns: LuaRetur
 
 function detectChainable(method: RawMethod, className: string): boolean {
     if (method.returns.length === 0) return true;
+
     return method.returns.some((r) => r.type === className || r.type === 'self');
 }
 
@@ -90,7 +86,7 @@ function buildClassNameMap(allClasses: Map<string, LuaClass>): Map<string, strin
         map.set(name, name);
 
         if (name.endsWith('Class')) {
-            const short = name.slice(0, -5); // strip "Class"
+            const short = name.slice(0, -5);
             if (!map.has(short)) map.set(short, name);
         }
 
@@ -199,7 +195,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     const classNameMap = buildClassNameMap(allClasses);
 
     for (const file of parsedFiles) {
-        if (!isFacadeFile(file.filePath)) continue;
+        if (isTypeFile(file.filePath)) continue;
 
         for (const rawMethod of file.methods) {
             const canonicalName = classNameMap.get(rawMethod.className) ?? rawMethod.className;
@@ -244,6 +240,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     }
 
     const entrypoint = allClasses.get(TSFX_ENTRYPOINT);
+
     if (!entrypoint) {
         console.error(`[merge] ERROR: Could not find ${TSFX_ENTRYPOINT} in any parsed file.`);
         process.exit(1);
