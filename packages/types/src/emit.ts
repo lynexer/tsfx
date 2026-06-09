@@ -20,9 +20,21 @@ function formatType(t: string): string {
     return t.trim() || 'any';
 }
 
-/** Render a param name for a function stub body (strip ? suffix) */
-function stubParam(p: LuaParam): string {
+/**
+ * Param name for an annotation line — includes the `?` suffix.
+ * e.g.  `---@param source? number`
+ */
+function annotParam(p: LuaParam): string {
     return p.optional ? `${p.name}?` : p.name;
+}
+
+/**
+ * Param name for the actual Lua function stub body — NO `?` suffix.
+ * Optional params are expressed only in the annotation, not the signature.
+ * e.g.  `function TSFXClass.Player(source) end`
+ */
+function stubParam(p: LuaParam): string {
+    return p.name;
 }
 
 interface FunSignature {
@@ -30,37 +42,77 @@ interface FunSignature {
     returnType: string;
 }
 
+function findMatchingParen(str: string, openIdx: number): number {
+    let depth = 0;
+
+    for (let i = openIdx; i < str.length; i++) {
+        if (str[i] === '(') depth++;
+        else if (str[i] === ')') {
+            depth--;
+            if (depth === 0) return i;
+        }
+    }
+
+    return -1;
+}
+
 /**
- * Parses `fun(source?: number): PlayerHandleClass` into structured form.
- * Returns null if the type isn't a fun(...) signature (i.e. it's a bare class name).
+ * Splits a param string at top-level commas only (not commas inside nested
+ * parentheses or angle brackets).
+ */
+function splitTopLevelParams(paramStr: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let current = '';
+
+    for (const ch of paramStr) {
+        if (ch === '(' || ch === '<') depth++;
+        else if (ch === ')' || ch === '>') depth--;
+        else if (ch === ',' && depth === 0) {
+            parts.push(current.trim());
+            current = '';
+            continue;
+        }
+        current += ch;
+    }
+
+    if (current.trim()) parts.push(current.trim());
+
+    return parts;
+}
+
+/**
+ * Parses `fun(...): ReturnType` into a structured FunSignature.
+ * Returns null if typeExpr doesn't start with `fun(`.
  */
 function parseFunType(typeExpr: string): FunSignature | null {
-    if (!typeExpr.trimStart().startsWith('fun(')) return null;
+    const trimmed = typeExpr.trimStart();
+    if (!trimmed.startsWith('fun(')) return null;
 
-    const parenOpen = typeExpr.indexOf('(');
-    const parenClose = typeExpr.indexOf(')');
-    if (parenOpen === -1 || parenClose === -1) return null;
+    const openIdx = trimmed.indexOf('(');
+    const closeIdx = findMatchingParen(trimmed, openIdx);
+    if (openIdx === -1 || closeIdx === -1) return null;
 
-    const paramStr = typeExpr.slice(parenOpen + 1, parenClose).trim();
-    const afterParen = typeExpr.slice(parenClose + 1).trim();
-
-    const returnType = afterParen.startsWith(':') ? afterParen.slice(1).trim() : '';
+    const paramStr = trimmed.slice(openIdx + 1, closeIdx).trim();
+    const after = trimmed.slice(closeIdx + 1).trim();
+    const returnType = after.startsWith(':') ? after.slice(1).trim() : 'nil';
 
     const params: FunSignature['params'] = [];
 
     if (paramStr) {
-        for (const part of paramStr.split(',')) {
-            const [rawName, rawType] = part
-                .trim()
-                .split(':')
-                .map((s) => s.trim());
+        for (const part of splitTopLevelParams(paramStr)) {
+            const colonIdx = part.indexOf(':');
+            if (colonIdx === -1) continue;
+
+            const rawName = part.slice(0, colonIdx).trim();
+            const rawType = part.slice(colonIdx + 1).trim();
             if (!rawName) continue;
 
             const optional = rawName.endsWith('?');
 
             params.push({
                 name: rawName.replace('?', '').trim(),
-                type: rawType ?? 'any',
+                type: rawType || 'any',
                 optional
             });
         }
@@ -71,12 +123,9 @@ function parseFunType(typeExpr: string): FunSignature | null {
 
 function emitAlias(alias: LuaAlias, lines: string[]): void {
     lines.push('');
-
     if (alias.description) lines.push(doc(alias.description));
 
-    for (const g of alias.generics) {
-        lines.push(ann(`generic ${g}`));
-    }
+    for (const g of alias.generics) lines.push(ann(`generic ${g}`));
 
     lines.push(ann(`alias ${alias.name} ${alias.typeExpr}`));
 }
@@ -92,15 +141,8 @@ function emitClassDeclaration(cls: LuaClass, lines: string[]): void {
     lines.push('');
     if (cls.description) lines.push(doc(cls.description));
 
-    const classLine = cls.parent
-        ? ann(`class ${cls.name} : ${cls.parent}`)
-        : ann(`class ${cls.name}`);
-
-    lines.push(classLine);
-
-    for (const field of cls.fields) {
-        lines.push(emitField(field));
-    }
+    lines.push(cls.parent ? ann(`class ${cls.name} : ${cls.parent}`) : ann(`class ${cls.name}`));
+    for (const field of cls.fields) lines.push(emitField(field));
 
     lines.push(`local ${cls.name} = {}`);
 }
@@ -110,10 +152,9 @@ function emitMethod(method: LuaMethod, lines: string[]): void {
     if (method.description) lines.push(doc(method.description));
 
     for (const p of method.params) {
-        const opt = p.optional ? '?' : '';
         const desc = p.description ? `  ${p.description}` : '';
 
-        lines.push(ann(`param ${p.name}${opt} ${formatType(p.type)}${desc}`));
+        lines.push(ann(`param ${annotParam(p)} ${formatType(p.type)}${desc}`));
     }
 
     for (const r of method.returns) {
@@ -143,27 +184,24 @@ function emitTsfxGlobal(tsfxFields: TsfxField[], lines: string[]): void {
 
     for (const field of tsfxFields) {
         const sig = parseFunType(field.typeExpr);
+        if (!sig) continue;
 
-        if (sig) {
-            lines.push('');
+        lines.push('');
+        if (field.description) lines.push(doc(field.description));
 
-            if (field.description) lines.push(doc(field.description));
-
-            for (const p of sig.params) {
-                const opt = p.optional ? '?' : '';
-                lines.push(ann(`param ${p.name}${opt} ${formatType(p.type)}`));
-            }
-
-            lines.push(ann(`return ${formatType(sig.returnType)}`));
-
-            const paramStr = sig.params.map((p) => (p.optional ? `${p.name}?` : p.name)).join(', ');
-
-            lines.push(`function TSFXClass.${field.name}(${paramStr}) end`);
+        for (const p of sig.params) {
+            const opt = p.optional ? '?' : '';
+            lines.push(ann(`param ${p.name}${opt} ${formatType(p.type)}`));
         }
+
+        lines.push(ann(`return ${formatType(sig.returnType)}`));
+
+        const paramStr = sig.params.map((p) => p.name).join(', ');
+        lines.push(`function TSFXClass.${field.name}(${paramStr}) end`);
     }
 
     lines.push('');
-    lines.push(doc('@type TSFXClass'));
+    lines.push(ann('type TSFXClass'));
     lines.push('TSFX = TSFXClass');
 }
 
@@ -181,25 +219,15 @@ const FILE_HEADER = `---@meta
 export function emitLibrary(model: SdkModel): string {
     const lines: string[] = [FILE_HEADER];
 
-    const sortedAliases = Array.from(model.aliases.values()).sort((a, b) =>
-        a.name.localeCompare(b.name)
-    );
-
-    for (const alias of sortedAliases) {
+    for (const alias of [...model.aliases.values()].sort((a, b) => a.name.localeCompare(b.name))) {
         emitAlias(alias, lines);
     }
 
-    const sortedClasses = Array.from(model.classes.values()).sort((a, b) =>
-        a.name.localeCompare(b.name)
-    );
-
-    for (const cls of sortedClasses) {
+    for (const cls of [...model.classes.values()].sort((a, b) => a.name.localeCompare(b.name))) {
         emitClassDeclaration(cls, lines);
-        const sortedMethods = cls.methods.slice().sort((a, b) => a.name.localeCompare(b.name));
+        const sorted = cls.methods.slice().sort((a, b) => a.name.localeCompare(b.name));
 
-        for (const method of sortedMethods) {
-            emitMethod(method, lines);
-        }
+        for (const method of sorted) emitMethod(method, lines);
     }
 
     emitTsfxGlobal(model.tsfxFields, lines);

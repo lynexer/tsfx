@@ -19,30 +19,23 @@ interface GitTreeResponse {
     truncated: boolean;
 }
 
-export interface FetchedFile {
-    path: string;
-    content: string;
-}
+/**
+ * Runtime-only path segments — these directories hold implementation code,
+ * not LuaCATS declarations, so parsing them would just add noise.
+ */
+const SKIP_SEGMENTS = ['/client/', '/server/', '/shared/lib/', '/shared/bridge/', '/shared/core/'];
 
-/** Paths that are relevant as type sources */
-function isRelevantFile(path: string): boolean {
-    if (path.startsWith('resource/shared/types/') && path.endsWith('.lua')) {
-        return true;
+function isLuaSourceFile(path: string): boolean {
+    if (!path.startsWith('resource/')) return false;
+    if (!path.endsWith('.lua')) return false;
+
+    if (path.endsWith('fxmanifest.lua')) return false;
+
+    for (const seg of SKIP_SEGMENTS) {
+        if (path.includes(seg)) return false;
     }
 
-    if (path.startsWith('resource/features/') && path.endsWith('types.d.lua')) {
-        return true;
-    }
-
-    if (path.startsWith('resource/features/') && path.endsWith('facade.lua')) {
-        return true;
-    }
-
-    if (path.startsWith('resource/features/') && path.endsWith('_facade.lua')) {
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 /** Fetch JSON with a User-Agent header (required by GitHub API) */
@@ -75,6 +68,11 @@ async function fetchRaw(path: string): Promise<string> {
     return res.text();
 }
 
+export interface FetchedFile {
+    path: string;
+    content: string;
+}
+
 /**
  * Returns all relevant Lua files from the SDK repo with their raw content.
  * Fetches in parallel with a small concurrency cap to avoid rate-limiting.
@@ -91,20 +89,16 @@ export async function fetchSdkFiles(): Promise<FetchedFile[]> {
     }
 
     const relevant = tree.tree.filter(
-        (entry) => entry.type === 'blob' && isRelevantFile(entry.path)
+        (entry) => entry.type === 'blob' && isLuaSourceFile(entry.path)
     );
 
-    console.log(`[fetch] Found ${relevant.length} relevant Lua files to download.`);
-    relevant.forEach((e) => {
-        console.log(`  → ${e.path}`);
-    });
+    console.log(`[fetch] Found ${relevant.length} Lua source files to scan.`);
 
     const results: FetchedFile[] = [];
     const BATCH = 5;
 
     for (let i = 0; i < relevant.length; i += BATCH) {
         const batch = relevant.slice(i, i + BATCH);
-
         const fetched = await Promise.all(
             batch.map(async (entry) => {
                 const content = await fetchRaw(entry.path);
@@ -116,6 +110,5 @@ export async function fetchSdkFiles(): Promise<FetchedFile[]> {
     }
 
     console.log(`[fetch] Downloaded ${results.length} files.`);
-
     return results;
 }

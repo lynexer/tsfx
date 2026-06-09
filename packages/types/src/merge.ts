@@ -12,11 +12,15 @@ import type {
 const TSFX_ENTRYPOINT = 'TSFXClass';
 
 function isTypeFile(path: string): boolean {
-    return path.startsWith('resource/shared/types/') || path.endsWith('types.d.lua');
+    if (path.includes('/types/')) return true;
+    if (path.endsWith('.d.lua')) return true;
+
+    return false;
 }
 
 function isFacadeFile(path: string): boolean {
-    return path.endsWith('facade.lua') || path.endsWith('_facade.lua');
+    const filename = path.split('/').pop() ?? '';
+    return filename.includes('facade') && filename.endsWith('.lua');
 }
 
 function detectChainable(method: RawMethod, className: string): boolean {
@@ -41,30 +45,39 @@ const LUA_PRIMITIVES = new Set([
     'self',
     'T',
     'K',
-    'V'
+    'V',
+    'U'
 ]);
 
-/**
- * Extracts all potential named type identifiers from a type expression string.
- * We scan for word-boundary-delimited tokens that start with an uppercase
- * letter and aren't Lua primitives.
- */
 function extractTypeNames(typeExpr: string): string[] {
     const found: string[] = [];
     const re = /\b([A-Z][A-Za-z0-9_]*)\b/g;
     let m = re.exec(typeExpr);
-
     while (m !== null) {
-        const name = m[1];
-
-        if (!LUA_PRIMITIVES.has(name)) {
-            found.push(name);
-        }
-
+        if (!LUA_PRIMITIVES.has(m[1])) found.push(m[1]);
         m = re.exec(typeExpr);
     }
-
     return found;
+}
+
+function buildClassNameMap(allClasses: Map<string, LuaClass>): Map<string, string> {
+    const map = new Map<string, string>();
+
+    for (const name of allClasses.keys()) {
+        map.set(name, name);
+
+        if (name.endsWith('Class')) {
+            const short = name.slice(0, -5); // strip "Class"
+            if (!map.has(short)) map.set(short, name);
+        }
+
+        if (name.endsWith('HandleClass')) {
+            const short = name.slice(0, -5);
+            if (!map.has(short)) map.set(short, name);
+        }
+    }
+
+    return map;
 }
 
 function buildReachableSet(
@@ -82,21 +95,16 @@ function buildReachableSet(
             queue.push(typeName);
         } else if (allAliases.has(typeName) && !reachableAliases.has(typeName)) {
             reachableAliases.add(typeName);
-
             const alias = allAliases.get(typeName);
 
             if (alias) {
-                for (const name of extractTypeNames(alias.typeExpr)) {
-                    enqueue(name);
-                }
+                for (const name of extractTypeNames(alias.typeExpr)) enqueue(name);
             }
         }
     }
 
     function walkTypeExpr(typeExpr: string): void {
-        for (const name of extractTypeNames(typeExpr)) {
-            enqueue(name);
-        }
+        for (const name of extractTypeNames(typeExpr)) enqueue(name);
     }
 
     while (queue.length > 0) {
@@ -108,9 +116,7 @@ function buildReachableSet(
 
         if (cls.parent) enqueue(cls.parent);
 
-        for (const field of cls.fields) {
-            walkTypeExpr(field.type);
-        }
+        for (const field of cls.fields) walkTypeExpr(field.type);
 
         for (const method of cls.methods) {
             for (const param of method.params) walkTypeExpr(param.type);
@@ -153,9 +159,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
                 }
             }
         }
-    }
 
-    for (const file of parsedFiles) {
         for (const rawAlias of file.aliases) {
             if (!allAliases.has(rawAlias.name)) {
                 allAliases.set(rawAlias.name, {
@@ -169,42 +173,40 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
         }
     }
 
+    const classNameMap = buildClassNameMap(allClasses);
+
     for (const file of parsedFiles) {
         if (!isFacadeFile(file.filePath)) continue;
 
         for (const rawMethod of file.methods) {
-            const cls = allClasses.get(rawMethod.className);
+            const canonicalName = classNameMap.get(rawMethod.className) ?? rawMethod.className;
+            const target = allClasses.get(canonicalName);
 
-            if (!cls) {
+            if (!target) {
                 console.warn(
-                    `[merge] Warning: ${rawMethod.className}:${rawMethod.name} references undeclared class — creating stub.`
+                    `[merge] Warning: ${rawMethod.className}:${rawMethod.name} — no matching class found (tried "${canonicalName}"), skipping.`
                 );
 
-                allClasses.set(rawMethod.className, {
-                    name: rawMethod.className,
-                    fields: [],
-                    methods: [],
-                    description: '',
-                    sourceFile: file.filePath
-                });
+                continue;
             }
-
-            const target = allClasses.get(rawMethod.className);
-            if (!target) continue;
 
             if (target.methods.find((m) => m.name === rawMethod.name)) continue;
 
-            const chainable = detectChainable(rawMethod, rawMethod.className);
+            const chainable = detectChainable(rawMethod, canonicalName);
             let finalReturns: LuaReturn[] = rawMethod.returns;
+
             if (chainable && rawMethod.returns.length === 0) {
-                finalReturns = [
-                    { type: rawMethod.className, description: 'The handle for chaining.' }
-                ];
+                finalReturns = [{ type: canonicalName, description: 'The handle for chaining.' }];
             }
+
+            finalReturns = finalReturns.map((r) => ({
+                ...r,
+                type: classNameMap.get(r.type) ?? r.type
+            }));
 
             const method: LuaMethod = {
                 name: rawMethod.name,
-                className: rawMethod.className,
+                className: canonicalName,
                 callStyle: rawMethod.callStyle,
                 params: rawMethod.params,
                 returns: finalReturns,
@@ -218,11 +220,8 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     }
 
     const entrypoint = allClasses.get(TSFX_ENTRYPOINT);
-
     if (!entrypoint) {
         console.error(`[merge] ERROR: Could not find ${TSFX_ENTRYPOINT} in any parsed file.`);
-        console.error('[merge] Ensure resource/shared/types/tsfx.lua is being fetched correctly.');
-
         process.exit(1);
     }
 
@@ -248,6 +247,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     }
 
     const prunedAliases = new Map<string, LuaAlias>();
+
     for (const name of reachableAliases) {
         const alias = allAliases.get(name);
         if (alias) prunedAliases.set(name, alias);
@@ -261,17 +261,13 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     );
     console.log(`[merge] TSFX fields: ${tsfxFields.length}`);
 
-    if (prunedClasses.size < totalClasses) {
-        const pruned = [...allClasses.keys()].filter(
-            (k) => k !== TSFX_ENTRYPOINT && !reachableClasses.has(k)
-        );
+    const unreachable = [...allClasses.keys()].filter(
+        (k) => k !== TSFX_ENTRYPOINT && !reachableClasses.has(k)
+    );
 
-        console.log(`[merge] Pruned (unreachable): ${pruned.join(', ')}`);
+    if (unreachable.length > 0) {
+        console.log(`[merge] Pruned (unreachable): ${unreachable.join(', ')}`);
     }
 
-    return {
-        classes: prunedClasses,
-        aliases: prunedAliases,
-        tsfxFields
-    };
+    return { classes: prunedClasses, aliases: prunedAliases, tsfxFields };
 }
