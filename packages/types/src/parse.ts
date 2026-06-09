@@ -2,7 +2,8 @@ import type { FetchedFile } from './fetch.js';
 import type { LuaParam, LuaReturn, ParsedFile, RawAlias, RawClass, RawMethod } from './types.js';
 
 const RE_CLASS = /^---\s*@class\s+([\w.]+)(?:\s*:\s*([\w.]+))?/;
-const RE_ALIAS = /^---\s*@alias\s+([\w]+)\s+(.*)/;
+const RE_ALIAS = /^---\s*@alias\s+([\w]+)(?:\s+(.*))?/;
+const RE_VARIANT = /^---\|/;
 const RE_GENERIC = /^---\s*@generic\s+([\w]+)/;
 const RE_FIELD =
     /^---\s*@field\s+(?:(?:public|private|protected)\s+)?([\w]+)(\?)?\s+(.*?)(?:\s{2,}(.*))?$/;
@@ -21,12 +22,14 @@ function parseDescription(raw: string | undefined): string {
 
 interface AnnotationBlock {
     annotations: string[];
+    variants: string[];
     description: string;
     lineCount: number;
 }
 
 function collectAnnotationBlock(lines: string[], startIndex: number): AnnotationBlock {
     const annotations: string[] = [];
+    const variants: string[] = [];
     const descParts: string[] = [];
     let i = startIndex;
 
@@ -34,7 +37,9 @@ function collectAnnotationBlock(lines: string[], startIndex: number): Annotation
         const line = lines[i].trim();
         if (!line.startsWith('---')) break;
 
-        if (/^---\s*@/.test(line)) {
+        if (RE_VARIANT.test(line)) {
+            variants.push(line);
+        } else if (/^---\s*@/.test(line)) {
             annotations.push(line);
         } else {
             const dm = line.match(RE_DESC);
@@ -46,6 +51,7 @@ function collectAnnotationBlock(lines: string[], startIndex: number): Annotation
 
     return {
         annotations,
+        variants,
         description: descParts.join(' ').trim(),
         lineCount: i - startIndex
     };
@@ -74,6 +80,7 @@ export function parseFile(file: FetchedFile): ParsedFile {
 
         let pendingGenerics: string[] = [];
         let pendingDescription = block.description;
+        let lastAliasIndex = -1;
 
         for (const annotation of block.annotations) {
             const gm = annotation.match(RE_GENERIC);
@@ -84,11 +91,12 @@ export function parseFile(file: FetchedFile): ParsedFile {
             }
 
             const am = annotation.match(RE_ALIAS);
-
             if (am) {
+                lastAliasIndex = aliases.length;
+
                 aliases.push({
                     name: am[1],
-                    typeExpr: am[2].trim(),
+                    typeExpr: am[2]?.trim() ?? '',
                     generics: pendingGenerics,
                     description: pendingDescription
                 });
@@ -100,7 +108,6 @@ export function parseFile(file: FetchedFile): ParsedFile {
             }
 
             const cm = annotation.match(RE_CLASS);
-
             if (cm) {
                 const cls: RawClass = {
                     name: cm[1],
@@ -130,13 +137,18 @@ export function parseFile(file: FetchedFile): ParsedFile {
             }
         }
 
-        const funcMatch = nextLine.match(RE_FUNCTION);
+        if (block.variants.length > 0 && lastAliasIndex >= 0) {
+            const target = aliases[lastAliasIndex];
+            const variantStr = block.variants.join('\n');
 
+            target.typeExpr = target.typeExpr ? `${target.typeExpr}\n${variantStr}` : variantStr;
+        }
+
+        const funcMatch = nextLine.match(RE_FUNCTION);
         if (funcMatch) {
             const className = funcMatch[1];
             const separator = funcMatch[2] as ':' | '.';
             const methodName = funcMatch[3];
-
             const params: LuaParam[] = [];
             const returns: LuaReturn[] = [];
             const generics: string[] = [];

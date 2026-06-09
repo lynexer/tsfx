@@ -128,7 +128,15 @@ function emitAlias(alias: LuaAlias, lines: string[]): void {
 
     for (const g of alias.generics) lines.push(ann(`generic ${g}`));
 
-    lines.push(ann(`alias ${alias.name} ${alias.typeExpr}`));
+    if (alias.typeExpr.includes('\n') || alias.typeExpr.startsWith('---|')) {
+        lines.push(ann(`alias ${alias.name}`));
+
+        for (const variant of alias.typeExpr.split('\n')) {
+            if (variant.trim()) lines.push(variant.trim());
+        }
+    } else {
+        lines.push(ann(`alias ${alias.name}${alias.typeExpr ? ` ${alias.typeExpr}` : ''}`));
+    }
 }
 
 function emitField(field: LuaField): string {
