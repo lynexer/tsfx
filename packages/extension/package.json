@@ -23,8 +23,12 @@
     "extensionDependencies": ["sumneko.lua"],
     "scripts": {
         "build": "tsup",
+        "watch": "tsup --watch",
         "vscode:prepublish": "tsup",
         "lint": "biome check --write ."
+    },
+    "dependencies": {
+        "@tsfx/types": "workspace:*"
     },
     "devDependencies": {
         "@biomejs/biome": "^2.4.15",

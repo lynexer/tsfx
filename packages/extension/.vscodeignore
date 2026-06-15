@@ -1,0 +1,6 @@
+src/**
+dist/**/*.map
+tsup.config.ts
+tsconfig.json
+.gitignore
+node_modules/**

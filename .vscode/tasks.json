@@ -7,7 +7,7 @@
             "command": "pnpm",
             "args": ["run", "watch"],
             "options": {
-                "cwd": "${workspaceFolder}/packages/vscode"
+                "cwd": "${workspaceFolder}/packages/extension"
             },
             "problemMatcher": {
                 "owner": "tsup",

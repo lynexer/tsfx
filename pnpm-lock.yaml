@@ -244,6 +244,10 @@ importers:
         version: 5.9.3
 
   packages/extension:
+    dependencies:
+      '@tsfx/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.15
