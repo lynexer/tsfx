@@ -1,0 +1,4 @@
+{
+    "extends": ["@repo/biome-config/biome"],
+    "root": false
+}

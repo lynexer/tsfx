@@ -1,0 +1,38 @@
+{
+    "name": "@tsfx/extension",
+    "version": "0.1.0",
+    "description": "LuaLS type definitions for the TSFX SDK.",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.71.0"
+    },
+    "activationEvents": ["onLanguage:lua"],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "tsfx",
+            "properties": {
+                "tsfx.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable TSFX LuaLS type definitions."
+                }
+            }
+        }
+    },
+    "extensionDependencies": ["sumneko.lua"],
+    "scripts": {
+        "build": "tsup",
+        "vscode:prepublish": "tsup",
+        "lint": "biome check --write ."
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.4.15",
+        "@repo/biome-config": "workspace:*",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "^25.9.3",
+        "@types/vscode": "^1.120.0",
+        "tsup": "^8.5.1",
+        "typescript": "^6.0.3"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "extends": "@repo/typescript-config/base.json",
+    "compilerOptions": {
+        "outDir": "dist",
+        "rootDir": "src",
+        "types": ["@types/node", "@types/vscode"]
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist", ".turbo", "library"]
+}
