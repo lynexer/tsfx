@@ -1,8 +1,9 @@
 {
-    "name": "@tsfx/extension",
+    "name": "tsfx-vscode",
     "version": "0.1.0",
     "description": "LuaLS type definitions for the TSFX SDK.",
     "license": "MIT",
+    "publisher": "lynexer",
     "engines": {
         "vscode": "^1.71.0"
     },
