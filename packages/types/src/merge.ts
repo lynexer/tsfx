@@ -19,6 +19,7 @@ const TSFX_ENTRYPOINT = 'TSFXClass';
 
 interface GeneratorConfig {
     denyList: string[];
+    fieldOverrides: Record<string, string>;
 }
 
 function loadConfig(): GeneratorConfig {
@@ -26,7 +27,7 @@ function loadConfig(): GeneratorConfig {
         const raw = readFileSync(join(__dirname, 'config.json'), 'utf-8');
         return JSON.parse(raw) as GeneratorConfig;
     } catch {
-        return { denyList: [] };
+        return { denyList: [], fieldOverrides: {} };
     }
 }
 
@@ -277,7 +278,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
 
     const tsfxFields: TsfxField[] = entrypoint.fields.map((f) => ({
         name: f.name,
-        typeExpr: f.type,
+        typeExpr: config.fieldOverrides[f.name] ?? f.type,
         description: f.description
     }));
 

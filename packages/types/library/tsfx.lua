@@ -1074,7 +1074,7 @@ local VersionRunConfig = {}
 ---@field Table TableClass
 ---@field Version VersionClass
 ---@field Interface fun(name: string, methods: string[]): InterfaceDef
----@field Class fun(name: string): ClassDef
+---@field Class fun(name: string): ClassInstance
 local TSFXClass = {}
 
 ---@param source? number
@@ -1100,7 +1100,7 @@ function TSFXClass.Tick(interval, fn) end
 function TSFXClass.Interface(name, methods) end
 
 ---@param name string
----@return ClassDef
+---@return ClassInstance
 function TSFXClass.Class(name) end
 
 ---@type TSFXClass

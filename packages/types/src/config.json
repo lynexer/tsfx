@@ -12,5 +12,8 @@
         "AdapterCategoryConfig",
         "IAdapter",
         "TSFXConfig"
-    ]
+    ],
+    "fieldOverrides": {
+        "Class": "fun(name: string): ClassInstance"
+    }
 }
