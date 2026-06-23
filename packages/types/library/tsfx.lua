@@ -133,6 +133,72 @@ function CacheClass.has(key) end
 ---@return nil
 function CacheClass.set(key, value, ttl) end
 
+---@class ClassDef
+---@field super ClassDef | nil The parent class. Set by :extends(). Call parent methods via ClassName.super.method(self, ...)
+---@field __name string The name passed to Class()
+---@field __super ClassDef | nil Internal parent reference used for chain walking.
+---@field __abstract boolean True if :abstract() was called
+---@field __sealed boolean True if :sealed() was called
+---@field __interfaces table List of InterfaceDef obligations inherited and declared on this class
+---@field __static table Namespace for static methods. Entries are auto-promoted onto the class as first instantiation
+---@field __get table Namespace for getter accessors. Keys are property names, values are function(self)
+---@field __set table Namespace for setter accessors. Keys are property names, values are function(self, value)
+local ClassDef = {}
+
+---@param self ClassDef
+---@return ClassDef
+function ClassDef.abstract(self) end
+
+---@param self ClassDef
+---@param instanceMeta table
+---@return ClassInstance
+function ClassDef.define(self, instanceMeta) end
+
+---@param self ClassDef
+---@param parent ClassInstance
+---@return ClassDef
+function ClassDef.extends(self, parent) end
+
+---@param self ClassDef
+---@param iface InterfaceDef
+---@return ClassDef
+function ClassDef.implements(self, iface) end
+
+---@param v any
+---@return boolean
+function ClassDef.isClass(v) end
+
+---@param v any
+---@return boolean
+function ClassDef.isInstance(v) end
+
+---@param self ClassDef
+---@param source table Plain table of methods to copy
+---@param force? boolean When true, overwrite existing methods
+---@return ClassDef
+function ClassDef.mixin(self, source, force) end
+
+---@param name string
+---@return ClassDef
+function ClassDef.new(name) end
+
+---@param self ClassDef
+---@return ClassDef
+function ClassDef.sealed(self) end
+
+---@class ClassInstance
+---@field __class string The name of the class thisi instance belongs to
+---@field new fun(...): ClassInstance Create a new instance of the class
+---@field super ClassInstance | nil Parent class reference. Call parent methods via Classname.super.method(self, ...)
+---@field instanceof fun(self: ClassInstance, klass: ClassInstance): boolean Returns true if this instance is of the given class or any ancestor
+---@field __get table Getter namespace. Define as `function MyClass.__get:propName()`. Read-only if no matching __set defined
+---@field __set table Setter namespace. Define as `function MyClass.__set:propName(value)`. Throws if no matching __get defined
+---@field constructor? fun(self: ClassInstance, ...) Optional. Called by .new(...) with all arguments passed through
+---@field toString? fun(self: ClassInstance): string Optional. Override for custom string representation. Called by tostring()
+---@field equals? fun(self: ClassInstance, other: ClassInstance): boolean Optional. Override to define equality. Called by == operator
+---@field lessThan? fun(self: ClassInstance, other: ClassInstance): boolean Optional. Override to define ordering. Required to use < operator
+local ClassInstance = {}
+
 ---@class EventBusClass
 ---@field _listeners table<string, {callback: function, resource: string?}[]> Event listeners by event name
 ---@field _rateLimits table<string, EventBusRateLimit> Rate limit configs by event
@@ -280,6 +346,20 @@ local IdentifierData = {}
 ---@field gender string Gender identifier
 ---@field nationality string|nil Nationality
 local IdentityData = {}
+
+---@class InterfaceDef
+---@field __name string Human-readable interface name, used in error messages.
+---@field __methods string[] List of method names implementing classes must define.
+local InterfaceDef = {}
+
+---@param v any
+---@return boolean
+function InterfaceDef.isInterface(v) end
+
+---@param name string
+---@param methods string[]
+---@return InterfaceDef
+function InterfaceDef.new(name, methods) end
 
 ---@class InventoryHandleClass
 local InventoryHandleClass = {}
@@ -993,6 +1073,8 @@ local VersionRunConfig = {}
 ---@field String StringClass
 ---@field Table TableClass
 ---@field Version VersionClass
+---@field Interface fun(name: string, methods: string[]): InterfaceDef
+---@field Class fun(name: string): ClassDef
 local TSFXClass = {}
 
 ---@param source? number
@@ -1011,6 +1093,15 @@ function TSFXClass.StateMachine(name, opts) end
 ---@param fn fun(deltaTime: number)
 ---@return LoopHandle
 function TSFXClass.Tick(interval, fn) end
+
+---@param name string
+---@param methods string[]
+---@return InterfaceDef
+function TSFXClass.Interface(name, methods) end
+
+---@param name string
+---@return ClassDef
+function TSFXClass.Class(name) end
 
 ---@type TSFXClass
 TSFX = TSFXClass

@@ -1,0 +1,16 @@
+{
+    "denyList": [
+        "ModuleBuilderClass",
+        "ModuleBuilderDecl",
+        "MethodsBuilderClass",
+        "ManifestModule",
+        "ManifestMethod",
+        "ModuleDeclaration",
+        "ExportResponse",
+        "ExportClass",
+        "AdapterCandidate",
+        "AdapterCategoryConfig",
+        "IAdapter",
+        "TSFXConfig"
+    ]
+}

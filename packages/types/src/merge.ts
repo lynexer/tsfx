@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type {
     LuaAlias,
     LuaClass,
@@ -10,7 +13,22 @@ import type {
     TsfxField
 } from './types.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const TSFX_ENTRYPOINT = 'TSFXClass';
+
+interface GeneratorConfig {
+    denyList: string[];
+}
+
+function loadConfig(): GeneratorConfig {
+    try {
+        const raw = readFileSync(join(__dirname, 'config.json'), 'utf-8');
+        return JSON.parse(raw) as GeneratorConfig;
+    } catch {
+        return { denyList: [] };
+    }
+}
 
 function isTypeFile(path: string): boolean {
     if (path.includes('/types/')) return true;
@@ -19,7 +37,6 @@ function isTypeFile(path: string): boolean {
     return false;
 }
 
-/** Conventional single-char generic names used in LuaCATS */
 const GENERIC_VARS = new Set(['T', 'K', 'V', 'U', 'R', 'E', 'S', 'A', 'B']);
 
 function inferGenerics(explicit: string[], params: LuaParam[], returns: LuaReturn[]): string[] {
@@ -82,8 +99,12 @@ function extractTypeNames(typeExpr: string): string[] {
 function buildClassNameMap(allClasses: Map<string, LuaClass>): Map<string, string> {
     const map = new Map<string, string>();
 
-    for (const name of allClasses.keys()) {
+    for (const [name, cls] of allClasses) {
         map.set(name, name);
+
+        if (cls.globalName && !map.has(cls.globalName)) {
+            map.set(cls.globalName, name);
+        }
 
         if (name.endsWith('Class')) {
             const short = name.slice(0, -5);
@@ -149,6 +170,13 @@ function buildReachableSet(
 export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     console.log('[merge] Building SDK model...');
 
+    const config = loadConfig();
+    const denyList = new Set(config.denyList);
+
+    if (denyList.size > 0) {
+        console.log(`[merge] Deny list: ${[...denyList].join(', ')}`);
+    }
+
     const allClasses = new Map<string, LuaClass>();
     const allAliases = new Map<string, LuaAlias>();
 
@@ -161,6 +189,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
                     fields: rawClass.fields,
                     methods: [],
                     description: rawClass.description,
+                    globalName: rawClass.globalName,
                     sourceFile: file.filePath
                 });
             } else if (isTypeFile(file.filePath)) {
@@ -263,6 +292,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     const prunedClasses = new Map<string, LuaClass>();
 
     for (const name of reachableClasses) {
+        if (denyList.has(name)) continue;
         const cls = allClasses.get(name);
         if (cls) prunedClasses.set(name, cls);
     }
@@ -270,6 +300,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     const prunedAliases = new Map<string, LuaAlias>();
 
     for (const name of reachableAliases) {
+        if (denyList.has(name)) continue;
         const alias = allAliases.get(name);
         if (alias) prunedAliases.set(name, alias);
     }
@@ -280,6 +311,7 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
     console.log(
         `[merge] Reachability: ${prunedClasses.size}/${totalClasses} classes, ${prunedAliases.size}/${totalAliases} aliases`
     );
+
     console.log(`[merge] TSFX fields: ${tsfxFields.length}`);
 
     const unreachable = [...allClasses.keys()].filter(
@@ -288,6 +320,13 @@ export function mergeModel(parsedFiles: ParsedFile[]): SdkModel {
 
     if (unreachable.length > 0) {
         console.log(`[merge] Pruned (unreachable): ${unreachable.join(', ')}`);
+    }
+
+    if (denyList.size > 0) {
+        const denied = [...reachableClasses, ...reachableAliases].filter((k) => denyList.has(k));
+        if (denied.length > 0) {
+            console.log(`[merge] Denied: ${denied.join(', ')}`);
+        }
     }
 
     return { classes: prunedClasses, aliases: prunedAliases, tsfxFields };

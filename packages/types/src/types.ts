@@ -41,6 +41,7 @@ export interface LuaClass {
     fields: LuaField[];
     methods: LuaMethod[];
     description: string;
+    globalName?: string;
     sourceFile: string;
 }
 
@@ -83,6 +84,7 @@ export interface RawClass {
     parent?: string;
     description: string;
     fields: LuaField[];
+    globalName?: string;
 }
 
 export interface RawAlias {

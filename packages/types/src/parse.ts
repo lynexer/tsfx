@@ -10,6 +10,7 @@ const RE_FIELD =
 const RE_PARAM = /^---\s*@param\s+([\w.]+)(\?)?\s+(.*?)(?:\s{2,}(.*))?$/;
 const RE_RETURN = /^---\s*@return\s+(.*?)(?:\s{2,}(.*))?$/;
 const RE_FUNCTION = /^(?:local\s+)?function\s+([\w]+)([:.])([\w]+)\s*\(/;
+const RE_GLOBAL_ASSIGN = /^([\w]+)\s*=\s*\{\}/;
 const RE_DESC = /^---\s+(?!@)(.*)/;
 
 function parseType(raw: string | undefined): string {
@@ -115,6 +116,12 @@ export function parseFile(file: FetchedFile): ParsedFile {
                     description: pendingDescription,
                     fields: []
                 };
+
+                const assignMatch = nextLine.match(RE_GLOBAL_ASSIGN);
+
+                if (assignMatch && assignMatch[1] !== cm[1]) {
+                    cls.globalName = assignMatch[1];
+                }
 
                 classes.push(cls);
                 pendingGenerics = [];
