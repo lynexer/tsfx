@@ -65,6 +65,22 @@
 ---| 4096 DISABLE_TORSO_VEHICLE_IK
 ---| 8192 LINKED_FACIAL
 
+---@alias InteractTarget vector3 | vector3[] | number | string | (number | string)[] | nil
+
+---@alias InteractTargetType
+---| 'globalObject'
+---| 'globalPed'
+---| 'globalPlayer'
+---| 'globalVehicle'
+---| 'globalOption'
+---| 'model'
+---| 'entity'
+---| 'localEntity'
+---| 'coords'
+---| 'sphere'
+---| 'box'
+---| 'poly'
+
 ---@alias LogLevel 'debug' | 'info' | 'warn' | 'error'
 
 ---@alias MoneyAccount 'bank' | 'cash' | 'black_money'
@@ -150,7 +166,7 @@ local ClassDef = {}
 function ClassDef.abstract(self) end
 
 ---@param self ClassDef
----@param instanceMeta table
+---@param instanceMeta? table
 ---@return ClassInstance
 function ClassDef.define(self, instanceMeta) end
 
@@ -346,6 +362,199 @@ local IdentifierData = {}
 ---@field gender string Gender identifier
 ---@field nationality string|nil Nationality
 local IdentityData = {}
+
+---@class InteractCallbackData
+---@field entity? number Entity handle. nil when no entity is involved (coord/zone targets).
+---@field coords vector3 World position where the interaction was triggered.
+---@field distance number Player distance from coords at time of selection.
+---@field zone? number Zone id. Populated by ox_target for zone-based targets only.
+---@field name? string Option name. Populated by sleepless_interact for active callbacks only.
+local InteractCallbackData = {}
+
+---@class InteractHandleClass
+---@field _targetType InteractTargetType
+---@field _id string | number | nil
+---@field _registered boolean
+---@field _option InteractOption
+---@field _target InteractTarget
+---@field _zoneRadius number | nil
+---@field _zoneSize number | nil
+---@field _zoneRotation number | nil
+---@field _zoneThickness number | nil
+---@field _zoneName string | nil
+---@field _zoneDebug boolean
+---@field _zoneDrawSprite boolean
+local InteractHandleClass = {}
+
+---@param value vector3 | vector3[]
+---@return InteractHandleClass
+function InteractHandleClass:at(value) end
+
+---@param value string | string[]
+---@return InteractHandleClass
+function InteractHandleClass:bones(value) end
+
+---@param fn fun(entity: number, distance: number, coords: vector3, name: string, bone: string): boolean
+---@return InteractHandleClass
+function InteractHandleClass:canInteract(fn) end
+
+---@param commandName string
+---@return InteractHandleClass
+function InteractHandleClass:command(commandName) end
+
+---@param ms number
+---@return InteractHandleClass
+function InteractHandleClass:cooldown(ms) end
+
+---@param state boolean
+---@return InteractHandleClass
+function InteractHandleClass:debug(state) end
+
+---@param d number
+---@return InteractHandleClass
+function InteractHandleClass:distance(d) end
+
+---@param state boolean
+---@return InteractHandleClass
+function InteractHandleClass:drawSprite(state) end
+
+---@param value number | number[]
+---@return InteractHandleClass
+function InteractHandleClass:entities(value) end
+
+---@param eventName string
+---@return InteractHandleClass
+function InteractHandleClass:event(eventName) end
+
+---@param exportName string
+---@return InteractHandleClass
+function InteractHandleClass:export(exportName) end
+
+---@return string | number | nil
+function InteractHandleClass:getId() end
+
+---@param value string | string[] | table<string, number>
+---@return InteractHandleClass
+function InteractHandleClass:groups(value) end
+
+---@param ms number
+---@return InteractHandleClass
+function InteractHandleClass:holdDuration(ms) end
+
+---@param iconName string
+---@return InteractHandleClass
+function InteractHandleClass:icon(iconName) end
+
+---@param colour string
+---@return InteractHandleClass
+function InteractHandleClass:iconColour(colour) end
+
+---@param value string | string[] | table<string, number>
+---@param anyItem? boolean
+---@return InteractHandleClass
+function InteractHandleClass:items(value, anyItem) end
+
+---@param text string
+---@return InteractHandleClass
+function InteractHandleClass:label(text) end
+
+---@param value number | number[]
+---@return InteractHandleClass
+function InteractHandleClass:localEntities(value) end
+
+---@param options InteractOption | InteractOption[]
+---@return InteractHandleClass
+function InteractHandleClass:mergeOptions(options) end
+
+---@param value number | string | (number | string)[]
+---@return InteractHandleClass
+function InteractHandleClass:models(value) end
+
+---@param identifier string
+---@return InteractHandleClass
+function InteractHandleClass:name(identifier) end
+
+---@param targetType InteractTargetType
+---@return InteractHandleClass
+function InteractHandleClass.new(targetType) end
+
+---@param fn fun(data: InteractCallbackData)
+---@return InteractHandleClass
+function InteractHandleClass:onActive(fn) end
+
+---@param fn fun(data: InteractCallbackData)
+---@return InteractHandleClass
+function InteractHandleClass:onInactive(fn) end
+
+---@param fn fun(data: InteractCallbackData)
+---@return InteractHandleClass
+function InteractHandleClass:onSelect(fn) end
+
+---@param points vector3[]
+---@return InteractHandleClass
+function InteractHandleClass:points(points) end
+
+---@param n number
+---@return InteractHandleClass
+function InteractHandleClass:radius(n) end
+
+---@return InteractHandleClass
+function InteractHandleClass:register() end
+
+---@param names? string | string[] Override which option names to remove. Defaults to self._option.name
+---@return InteractHandleClass
+function InteractHandleClass:remove(names) end
+
+---@param n number
+---@return InteractHandleClass
+function InteractHandleClass:rotation(n) end
+
+---@param eventName string
+---@return InteractHandleClass
+function InteractHandleClass:serverEvent(eventName) end
+
+---@param size number
+---@return InteractHandleClass
+function InteractHandleClass:size(size) end
+
+---@param n number
+---@return InteractHandleClass
+function InteractHandleClass:thickness(n) end
+
+---@param overrides table<string, any>
+---@return InteractHandleClass
+function InteractHandleClass:update(overrides) end
+
+---@param fn fun(data: InteractCallbackData)
+---@return InteractHandleClass
+function InteractHandleClass:whileActive(fn) end
+
+---@param zoneName string
+---@return InteractHandleClass
+function InteractHandleClass:zoneName(zoneName) end
+
+---@class InteractOption
+---@field label string
+---@field name? string Identifier used when removing a specific option.
+---@field icon? string Font Awesome icon name.
+---@field iconColour? string
+---@field distance? number Max distance at which the option is displayed.
+---@field canInteract? fun(entity: number, distance: number, coords: vector3, name: string, bone: string): boolean
+---@field onSelect? fun(data: InteractCallbackData)
+---@field groups? string|string[]|table<string, number>
+---@field items? string|string[]|table<string, number>
+---@field anyItem? boolean
+---@field bones? string|string[]
+---@field event? string
+---@field serverEvent? string
+---@field command? string
+---@field export? string
+---@field onActive? fun(data: InteractCallbackData)
+---@field onInactive? fun(data: InteractCallbackData)
+---@field whileActive? fun(data: InteractCallbackData)
+---@field holdDuration? number
+---@field cooldown? number
+local InteractOption = {}
 
 ---@class InterfaceDef
 ---@field __name string Human-readable interface name, used in error messages.
@@ -1058,6 +1267,7 @@ local VersionRunConfig = {}
 --- The TSFX Bridge SDK global. All SDK access starts here.
 ---@class TSFXClass
 ---@field Player fun(source?: number): PlayerHandleClass
+---@field Interact fun(targetType: InteractTargetType): InteractHandleClass
 ---@field Inventory InventoryHandleClass
 ---@field Notify NotifyHandleClass
 ---@field Events EventBusClass
@@ -1074,12 +1284,16 @@ local VersionRunConfig = {}
 ---@field Table TableClass
 ---@field Version VersionClass
 ---@field Interface fun(name: string, methods: string[]): InterfaceDef
----@field Class fun(name: string): ClassInstance
+---@field Class fun(name: string): ClassDef
 local TSFXClass = {}
 
 ---@param source? number
 ---@return PlayerHandleClass
 function TSFXClass.Player(source) end
+
+---@param targetType InteractTargetType
+---@return InteractHandleClass
+function TSFXClass.Interact(targetType) end
 
 ---@return FrameworkHandleClass
 function TSFXClass.Framework() end
@@ -1100,7 +1314,7 @@ function TSFXClass.Tick(interval, fn) end
 function TSFXClass.Interface(name, methods) end
 
 ---@param name string
----@return ClassInstance
+---@return ClassDef
 function TSFXClass.Class(name) end
 
 ---@type TSFXClass
