@@ -1286,6 +1286,7 @@ local VersionRunConfig = {}
 ---@field Interface fun(name: string, methods: string[]): InterfaceDef
 ---@field Class fun(name: string): ClassDef
 ---@field Import fun(moduleName: string, ...: any): unknown
+---@field Export fun(namespace: string, methods: table<string, function>): table<string, function> | nil
 local TSFXClass = {}
 
 ---@param source? number
@@ -1322,6 +1323,11 @@ function TSFXClass.Class(name) end
 ---@param ... any
 ---@return unknown
 function TSFXClass.Import(moduleName, ...) end
+
+---@param namespace string
+---@param methods table<string, function>
+---@return table<string, function> | nil
+function TSFXClass.Export(namespace, methods) end
 
 ---@type TSFXClass
 TSFX = TSFXClass
