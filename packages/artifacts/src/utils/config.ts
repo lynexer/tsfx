@@ -2,19 +2,10 @@ import path from 'node:path';
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
 import { red } from 'yoctocolors';
-
-export type BranchOption = 'recommended' | 'latest';
-export type OsOption = 'win32' | 'linux';
-export type PlatformOption = 'legacy' | 'enhanced';
+import type { BranchOption, CLIOptions, OsOption, PlatformOption } from '../types';
 
 export class Config {
-    public options: {
-        output?: string;
-        branch?: string;
-        platform?: string;
-        help?: boolean;
-        _unknown?: string[];
-    };
+    public options: CLIOptions;
 
     public outDir: string;
     public branch: BranchOption;

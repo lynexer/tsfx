@@ -3,28 +3,15 @@
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { Listr } from 'listr2';
 import { gray, green, yellow } from 'yoctocolors';
-import { download } from './services/Downloader';
-import { extract } from './services/Extractor';
-import { Config } from './utils/Config';
+import { download } from './services/downloader';
+import { extract } from './services/extractor';
+import { resolve } from './services/resolver';
+import { Config } from './utils/config';
+import { formatBytes } from './utils/format';
 
 interface Ctx {
     filePath?: string;
 }
-
-const formatBytes = (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let value = bytes;
-    let unitIndex = 0;
-
-    while (value >= 1024 && unitIndex < units.length - 1) {
-        value /= 1024;
-        unitIndex += 1;
-    }
-
-    const digits = unitIndex === 0 ? 0 : 1;
-
-    return `${value.toFixed(digits)} ${units[unitIndex]}`;
-};
 
 const main = async (): Promise<void> => {
     const config = new Config();
@@ -47,10 +34,11 @@ const main = async (): Promise<void> => {
             {
                 title: 'Downloading Artifact',
                 task: async (ctx, task) => {
-                    const result = await download(
-                        config.platform,
-                        config.branch,
-                        config.os,
+                    const source = await resolve(config.platform, config.branch, config.os);
+                    task.title = `Downloading Artifact (${source.version})`;
+
+                    ctx.filePath = await download(
+                        source.url,
                         config.outDir,
                         ({ downloaded, total, percent }) => {
                             const size = total
@@ -60,9 +48,6 @@ const main = async (): Promise<void> => {
                             task.output = `${size}${progress}`;
                         }
                     );
-
-                    ctx.filePath = result.filePath;
-                    task.title = `Downloading Artifact (${result.version})`;
                 }
             },
             {
