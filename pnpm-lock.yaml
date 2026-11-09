@@ -218,31 +218,6 @@ importers:
 
   packages/biome-config: {}
 
-  packages/compiler:
-    dependencies:
-      node-fetch:
-        specifier: ^3.3.2
-        version: 3.3.2
-    devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.4.15
-        version: 2.4.15
-      '@repo/biome-config':
-        specifier: workspace:*
-        version: link:../biome-config
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: ^22.15.21
-        version: 22.19.19
-      tsup:
-        specifier: ^8.5.0
-        version: 8.5.1(@swc/core@1.15.33)(jiti@2.7.0)(postcss@8.5.15)(tsx@4.22.4)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-
   packages/extension:
     dependencies:
       '@tsfx/types':
@@ -3325,6 +3300,7 @@ packages:
   image-size@2.0.2:
     resolution: {integrity: sha512-IRqXKlaXwgSMAMtpNzZa1ZAe8m+Sa1770Dhk8VkSsP9LS+iHD62Zd8FQKs8fbPiagBE7BzoFX23cxFnwshpV6w==}
     engines: {node: '>=16.x'}
+    deprecated: Use latest 2.x please
     hasBin: true
 
   indent-string@3.2.0:
