@@ -3,23 +3,23 @@ import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
 import { red } from 'yoctocolors';
 
-export type BranchOption = 'recommended' | 'stable' | 'latest';
+export type BranchOption = 'recommended' | 'latest';
 export type OsOption = 'win32' | 'linux';
+export type PlatformOption = 'legacy' | 'enhanced';
 
 export class Config {
     public options: {
         output?: string;
-        version?: string;
         branch?: string;
-        help?: string;
+        platform?: string;
+        help?: boolean;
         _unknown?: string[];
     };
 
     public outDir: string;
     public branch: BranchOption;
+    public platform: PlatformOption;
     public os: OsOption;
-    public fileName: string;
-    public artifactPath: string;
 
     private definitions = [
         {
@@ -29,10 +29,16 @@ export class Config {
             description: 'Output directory (default: fxserver)'
         },
         {
+            name: 'platform',
+            alias: 'p',
+            type: String,
+            description: 'Artifact platform (legacy, enhanced) [default: legacy]'
+        },
+        {
             name: 'branch',
             alias: 'b',
             type: String,
-            description: 'Artifact branch (recommended, stable, latest)'
+            description: 'Artifact branch (recommended, latest) [default: recommended]'
         },
         {
             name: 'help',
@@ -52,10 +58,9 @@ export class Config {
         }
 
         this.os = process.platform === 'win32' ? 'win32' : 'linux';
-        this.branch = this.validateBranchOptions();
+        this.platform = this.validatePlatformOption();
+        this.branch = this.validateBranchOption();
         this.outDir = path.resolve(this.options.output || 'fxserver');
-        this.fileName = this.os === 'win32' ? 'server.7z' : 'fx.tar.xz';
-        this.artifactPath = path.join(this.outDir, this.fileName);
     }
 
     public printHelp(): void {
@@ -73,17 +78,31 @@ export class Config {
         console.log(usage);
     }
 
-    private validateBranchOptions(): BranchOption {
-        const options = ['recommended', 'stable', 'latest'];
+    private validateBranchOption(): BranchOption {
+        const options = ['recommended', 'latest'];
 
         if (!this.options.branch) return 'recommended';
 
-        if (this.options.branch && options.includes(this.options.branch)) {
+        if (options.includes(this.options.branch)) {
             return this.options.branch as BranchOption;
-        } else {
-            console.error(red(`Unknown branch: '${this.options.branch}'. Using 'recommended'.`));
         }
 
+        console.error(red(`Unknown branch: '${this.options.branch}'. Using 'recommended'.`));
+
         return 'recommended';
+    }
+
+    private validatePlatformOption(): PlatformOption {
+        const options = ['legacy', 'enhanced'];
+
+        if (!this.options.platform) return 'legacy';
+
+        if (options.includes(this.options.platform)) {
+            return this.options.platform as PlatformOption;
+        }
+
+        console.error(red(`Unknown platform: '${this.options.platform}'. Using 'legacy'.`));
+
+        return 'legacy';
     }
 }
